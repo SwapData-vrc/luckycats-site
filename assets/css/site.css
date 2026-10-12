@@ -588,6 +588,31 @@ li:nth-child(3n) > .spot::before { background: radial-gradient(420px circle at v
 .cta__hint { color: var(--ink-2); }
 .cta .btn--line { background: rgba(255, 255, 255, 0.7); border-color: rgba(255, 255, 255, 0.9); }
 
+/* ------------------------------------------------------------- no pills */
+/* Labels are typography, not capsules: no backgrounds, no rounded chips. */
+.eyebrow { padding: 0; border-radius: 0; background: none; color: var(--eb-ink, var(--muted)); }
+.eyebrow::before { width: 6px; height: 6px; }
+.hero__tag { padding: 0; border: 0; border-radius: 0; background: none; }
+.nav__num { padding: 0; background: none; border-radius: 0; min-width: 0; }
+.badge { padding: 0; border-radius: 0; background: none; font: 500 12px/1 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.badge--live { background: none; color: #0d6b49; }
+.chip { padding: 0; border-radius: 0; background: none; box-shadow: none; font: 500 12px/1.3 var(--mono); letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.chip--award { background: none; color: #a35f00; font-weight: 500; }
+.chip--award::before { content: "★"; margin-right: 2px; }
+.ecard__lvl { padding: 0; border-radius: 0; background: none !important; color: var(--muted); }
+.ecard--signature .ecard__lvl { color: #2346b0; }
+.ecard--regional .ecard__lvl { color: #b6361a; }
+.ecard--world .ecard__lvl { color: var(--gold); }
+.ecard--world .chip--award { color: var(--gold); }
+.club { padding: 0; border: 0; border-radius: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.club span { border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+.club:hover span { border-bottom-color: var(--ink); }
+.rotator__word { padding: 0 2px; border-radius: 0; background: linear-gradient(transparent 62%, var(--gold) 62%, var(--gold) 92%, transparent 92%); }
+.mrow__vid { padding: 0; border-radius: 0; background: none; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--gold); text-decoration-thickness: 2px; }
+.vid__res { border-radius: 4px; }
+.cta .eyebrow { color: var(--ink); }
+.dr__chips { gap: 6px 18px; }
+
 /* ------------------------------------------------------------ responsive */
 @media (max-width: 1080px) {
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
