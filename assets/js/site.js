@@ -1,9 +1,13 @@
 // Lucky Cats 20850C. Everything data-driven reads window.LUCKY (data/team.js),
-// which scripts/sync.mjs regenerates from the VEX events API.
+// which scripts/sync.mjs regenerates from the VEX events API every night.
+// Motion uses anime.js v4 (vendored in assets/vendor).
+
+import { animate, stagger, splitText, utils } from "../vendor/anime.esm.min.js";
 
 const D = window.LUCKY;
 const TEAM = "20850C";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const finePointer = matchMedia("(pointer: fine)").matches;
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -19,27 +23,74 @@ function fmtRange(a, b) {
   return `${MONTHS[m1 - 1]} ${d1} – ${MONTHS[m2 - 1]} ${d2}`;
 }
 const ordinal = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+const suffix = (n) => ordinal(n).slice(String(n).length);
 const place = (e) => [e.city, STATES[e.region] || e.region].filter(Boolean).join(", ");
 const pct = (w, l, t) => (w + l + t ? Math.round((1000 * w) / (w + l + t)) / 10 : 0);
+const wl = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ""}`;
 
 const allEvents = () => D.seasonOrder.flatMap((s) => D.seasons[s].events.map((e) => ({ ...e, season: s })));
 const eventById = (id) => allEvents().find((e) => e.id === id);
+const played = (e) => e.matches.filter((m) => m.played && m.round !== 1);
+
+// ------------------------------------------------------------- in view ----
+// One observer for everything that animates when it scrolls into view.
+const onView = (() => {
+  const fns = new Map();
+  const io = new IntersectionObserver((ents) => {
+    for (const en of ents) {
+      if (!en.isIntersecting) continue;
+      const fn = fns.get(en.target);
+      io.unobserve(en.target);
+      fns.delete(en.target);
+      fn?.(en.target);
+    }
+  }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
+  return (el, fn) => { if (!el) return; if (reduced) { fn(el); return; } fns.set(el, fn); io.observe(el); };
+})();
+
+// Cards and rows rise in, staggered (ReactBits "AnimatedContent").
+function riseIn(els, { y = 36, gap = 70 } = {}) {
+  els = [...els];
+  if (!els.length) return;
+  if (reduced) { els.forEach((e) => (e.style.opacity = 1)); return; }
+  els.forEach((e) => e.setAttribute("data-in", ""));
+  onView(els[0], () => {
+    animate(els, { opacity: { from: 0, to: 1 }, translateY: { from: y, to: 0 }, duration: 1000, delay: stagger(gap), ease: "outExpo",
+      onComplete: () => els.forEach((e) => { e.removeAttribute("data-in"); e.style.transform = ""; e.style.opacity = ""; }) });
+  });
+}
+
+// Count a number up from zero (ReactBits "CountUp").
+function countUp(el, { delay = 0 } = {}) {
+  const to = Number(el.dataset.count), dec = Number(el.dataset.dec || 0);
+  const fmt = (v) => v.toFixed(dec);
+  if (reduced) { el.textContent = fmt(to); return; }
+  el.textContent = fmt(0);
+  const o = { v: 0 };
+  animate(o, { v: to, duration: 1600, delay, ease: "outExpo", onUpdate: () => (el.textContent = fmt(o.v)) });
+}
+const counters = (root, opts) => onView(root, () => $$("[data-count]", root).forEach((el, i) => countUp(el, { delay: i * 60, ...opts })));
+
+// Headings come in word by word out of a blur (ReactBits "BlurText").
+function blurText() {
+  for (const el of $$("[data-blur]")) {
+    if (reduced) continue;
+    const { words } = splitText(el, { words: true });
+    words.forEach((w) => { w.classList.add("word"); w.style.opacity = 0; });
+    onView(el, () => animate(words, {
+      opacity: { from: 0, to: 1 }, filter: { from: "blur(12px)", to: "blur(0px)" }, translateY: { from: 26, to: 0 },
+      duration: 1100, delay: stagger(80), ease: "outExpo",
+    }));
+  }
+}
 
 // ---------------------------------------------------------------- season ----
-// Default to the newest season once it has a few events behind it; until then
-// the finished one tells the better story.
+// Default to the newest season once it has a few events behind it.
 function defaultSeason() {
   const order = [...D.seasonOrder].reverse();
-  const ready = order.find((s) => D.seasons[s].totals.events >= 3);
-  return ready ?? order[order.length - 1];
+  return order.find((s) => D.seasons[s].totals.events >= 3) ?? order[order.length - 1];
 }
-let season = (() => {
-  try {
-    const saved = Number(localStorage.getItem("lc-season"));
-    if (D.seasons[saved]) return saved;
-  } catch {}
-  return defaultSeason();
-})();
+let season = defaultSeason();
 
 function buildSwitches() {
   for (const sw of $$("[data-switch]")) {
@@ -74,150 +125,295 @@ function syncSwitches() {
       if (yes) on = b;
     }
     const thumb = $(".switch__thumb", sw);
-    if (on && thumb) {
-      thumb.style.width = `${on.offsetWidth}px`;
-      thumb.style.transform = `translateX(${on.offsetLeft}px)`;
-    }
+    if (on && thumb) { thumb.style.width = `${on.offsetWidth}px`; thumb.style.transform = `translateX(${on.offsetLeft}px)`; }
   }
 }
 
 function setSeason(sid) {
   if (sid === season) return;
   season = sid;
-  try { localStorage.setItem("lc-season", sid); } catch {}
   syncSwitches();
   renderSeason(true);
 }
 
-function renderSeason(animate = false) {
+function renderSeason(changed = false) {
   const S = D.seasons[season];
   for (const el of $$("[data-season-caption]")) el.textContent = `${S.name}, ${S.years}`;
-  renderAccolades(S);
-  renderLedger(S, animate);
-  renderChart(S, animate);
-  renderTimeline(S);
+  renderRail(S, changed);
+  renderKpis(S, changed);
+  renderChart(S, changed);
   renderAoeNotes(S);
 }
 
-// ------------------------------------------------------------- accolades ----
-function awardTier(a, e) {
-  if (e.level === "World") return { cls: "award--world", tier: "World Championship" };
-  if (/Champions/i.test(a.title)) return { cls: "award--champ", tier: "Tournament win" };
-  if (e.level === "Regional") return { cls: "", tier: "State Championship" };
-  if (e.level === "Signature") return { cls: "", tier: "Signature Event" };
-  return { cls: "", tier: "Tournament" };
+// -------------------------------------------------------------- overview ----
+// Running record: +1 for a win, −1 for a loss, match by match.
+function sparkline(S) {
+  const ms = S.events.flatMap(played);
+  if (ms.length < 2) return "";
+  const pts = [0];
+  for (const m of ms) pts.push(pts[pts.length - 1] + (m.result === "W" ? 1 : m.result === "L" ? -1 : 0));
+  const W = 230, H = 64, pad = 4;
+  const lo = Math.min(0, ...pts), hi = Math.max(1, ...pts);
+  const x = (i) => pad + (i / (pts.length - 1)) * (W - pad * 2);
+  const y = (v) => pad + (1 - (v - lo) / (hi - lo)) * (H - pad * 2);
+  const line = pts.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const area = `${line}L${x(pts.length - 1).toFixed(1)},${y(0).toFixed(1)}L${x(0).toFixed(1)},${y(0).toFixed(1)}Z`;
+  return `<svg class="spark-line" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Running win-loss record over ${ms.length} matches">
+    <clipPath id="above-${S.id}"><rect x="0" y="0" width="${W}" height="${y(0)}"/></clipPath>
+    <path class="area-pos" d="${area}" clip-path="url(#above-${S.id})"/>
+    <line class="zero" x1="0" x2="${W}" y1="${y(0)}" y2="${y(0)}"/>
+    <path class="line" d="${line}"/></svg>`;
 }
 
-function renderAccolades(S) {
-  const list = $("#accoladeList");
-  const items = S.events
-    .flatMap((e) => e.awards.map((a) => ({ a, e })))
-    .sort((x, y) => (y.e.level === "World") - (x.e.level === "World") || y.e.start.localeCompare(x.e.start));
-
-  if (!items.length) {
-    const played = S.events.filter((e) => e.rank);
-    const latest = played[played.length - 1];
-    list.innerHTML = `
-      <article class="award award--empty" style="--i:0">
-        <h3 class="award__title">No awards yet</h3>
-        <p>${latest
-          ? `We've only played ${played.length === 1 ? "one event" : `${played.length} events`} in ${esc(S.name)} so far. At ${esc(latest.short)} we went ${latest.rank.w}–${latest.rank.l}${latest.rank.t ? `–${latest.rank.t}` : ""} in quals and finished ${ordinal(latest.rank.rank)}${latest.skills ? `, with a ${latest.skills.driver} in driver skills` : ""}. Check back later in the season.`
-          : `${esc(S.name)} hasn't started for us yet.`}</p>
-      </article>`;
-    return;
-  }
-
-  list.innerHTML = items.map(({ a, e }, i) => {
-    const t = awardTier(a, e);
-    const quals = a.qualifies.length ? `<span>Qualified for ${esc(a.qualifies.join(", ").replace("Event Region Championship", "State"))}</span>` : "";
+function renderOverview() {
+  const order = [...D.seasonOrder].reverse();
+  $("#seasonCards").innerHTML = order.map((sid, i) => {
+    const S = D.seasons[sid], T = S.totals;
+    const last = S.events.filter((e) => e.rank).pop();
     return `
-      <article class="award ${t.cls}" style="--i:${i}">
-        <span class="award__tier">${esc(t.tier)}</span>
-        <h3 class="award__title">${esc(a.title)}</h3>
-        <p class="award__event">${esc(e.short)}${e.level === "World" && e.division ? ` · ${esc(e.division)} Division` : ""}</p>
-        <p class="award__meta"><span>${esc(fmtDate(e.end))}</span><span>${esc(place(e))}</span>${quals}</p>
-      </article>`;
+      <button class="scard" type="button" data-go-season="${sid}">
+        <div class="scard__top">
+          <p class="scard__name">${esc(S.name)}<small>${esc(S.years)}</small></p>
+          <span class="badge ${i === 0 ? "badge--live" : ""}">${i === 0 ? "This season" : "Last season"}</span>
+        </div>
+        <div class="scard__main">
+          <div>
+            <p class="scard__record"><span data-count="${T.wins}">${T.wins}</span><span class="dash">–</span><span data-count="${T.losses}">${T.losses}</span></p>
+            <p class="scard__recordk">${wl(T.qual)} in quals · ${T.elim.w}–${T.elim.l} in elims</p>
+          </div>
+          ${sparkline(S)}
+        </div>
+        <dl class="scard__stats">
+          <div><dt>Best rank</dt><dd>${T.bestRank ? `<span data-count="${T.bestRank.rank}">${T.bestRank.rank}</span>${suffix(T.bestRank.rank)}` : "—"}</dd></div>
+          <div><dt>Driver</dt><dd><span data-count="${T.driver?.score ?? 0}">${T.driver?.score ?? 0}</span></dd></div>
+          <div><dt>Auton</dt><dd><span data-count="${T.programming?.score ?? 0}">${T.programming?.score ?? 0}</span></dd></div>
+          <div><dt>Awards</dt><dd><span data-count="${T.awards}">${T.awards}</span></dd></div>
+        </dl>
+        <p class="scard__latest"><span>${last ? `Latest: <b>${esc(last.short)}</b>, ${esc(fmtRange(last.start, last.end))}` : "No events yet"}</span><span class="scard__go">${T.events} event${T.events === 1 ? "" : "s"} →</span></p>
+      </button>`;
   }).join("");
-}
 
-// ---------------------------------------------------------------- ledger ----
-let ledgerSeen = false;
-function renderLedger(S, animate) {
-  const T = S.totals;
-  const ev = (id) => eventById(id)?.short ?? "";
-  const cells = [
-    { v: pct(T.wins, T.losses, T.ties), d: 1, unit: "%", k: "Win rate", where: `${T.matches} matches` },
-    { v: T.events, k: "Events", where: (() => {
-      const played = S.events.filter((e) => e.matches.some((m) => m.played));
-      const sig = played.filter((e) => e.level === "Signature").length;
-      return `${sig ? `${sig} Signature` : "no Signature events"}, ${played.some((e) => e.level === "World") ? "plus Worlds" : "no Worlds yet"}`;
-    })() },
-    { v: T.bestRank?.rank ?? 0, ord: true, k: "Best rank", where: ev(T.bestRank?.event) },
-    { v: T.awards, k: "Awards", where: T.awards ? "listed above" : "none yet" },
-    { v: T.high ?? 0, k: "High score", where: "best alliance score" },
-    { v: T.avg ?? 0, d: 1, k: "Average score", where: `${T.margin >= 0 ? "won by" : "lost by"} ${Math.abs(T.margin)} on average` },
-    { v: T.driver?.score ?? 0, k: "Driver skills", where: ev(T.driver?.event) },
-    { v: T.programming?.score ?? 0, k: "Auton skills", where: ev(T.programming?.event) },
-  ];
-  $("#ledger").innerHTML = `
-    <div class="ledger__record">
-      <p class="ledger__k">${esc(S.name)} record · W–L${T.ties ? "–T" : ""}</p>
-      <p class="ledger__big"><span data-count="${T.wins}">${T.wins}</span><span class="dash">–</span><span data-count="${T.losses}">${T.losses}</span>${T.ties ? `<span class="dash">–</span><span data-count="${T.ties}">${T.ties}</span>` : ""}</p>
-      <p class="ledger__sub"><b>${T.qual.w}–${T.qual.l}${T.qual.t ? `–${T.qual.t}` : ""}</b> in quals and <b>${T.elim.w}–${T.elim.l}</b> in elims.</p>
-    </div>
-    <div class="ledger__cells">
-      ${cells.map((c) => `
-        <div class="cell">
-          <p class="ledger__k">${esc(c.k)}</p>
-          <p class="cell__v"><span data-count="${c.v}" data-d="${c.d || 0}" ${c.ord ? "data-ord" : ""}>${c.ord ? ordinal(c.v) : c.v}</span>${c.unit ? `<small>${c.unit}</small>` : ""}</p>
-          <p class="cell__where">${esc(c.where)}</p>
-        </div>`).join("")}
-    </div>`;
-  if (ledgerSeen || animate) countUp($("#ledger"));
-}
-
-function countUp(root) {
-  if (reduced) return;
-  for (const el of $$("[data-count]", root)) {
-    const to = Number(el.dataset.count), d = Number(el.dataset.d || 0), ord = el.hasAttribute("data-ord");
-    const t0 = performance.now(), dur = 1100;
-    const fmt = (v) => (ord ? ordinal(Math.round(v)) : v.toFixed(d));
-    el.textContent = fmt(0);
-    const tick = (now) => {
-      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 4);
-      el.textContent = fmt(ord ? Math.max(1, to * e) : to * e);
-      if (p < 1) requestAnimationFrame(tick); else el.textContent = fmt(to);
-    };
-    requestAnimationFrame(tick);
+  for (const c of $$(".scard")) {
+    c.addEventListener("click", () => {
+      setSeason(Number(c.dataset.goSeason));
+      scrollToEl($("#events"));
+    });
   }
+  riseIn($$(".scard"));
+  counters($("#seasonCards"));
+
+  // awards, newest first
+  const items = allEvents().flatMap((e) => e.awards.map((a) => ({ a, e }))).sort((x, y) => y.e.end.localeCompare(x.e.end));
+  const seasonsWon = D.seasonOrder.filter((s) => D.seasons[s].totals.awards).length;
+  $("#awardsCount").textContent = items.length ? `${items.length} award${items.length === 1 ? "" : "s"} across ${seasonsWon} season${seasonsWon === 1 ? "" : "s"}` : "";
+  $("#awardList").innerHTML = items.length ? items.map(({ a, e }) => {
+    const world = e.level === "World", champ = /Champions/i.test(a.raw), fin = /Finalists/i.test(a.raw);
+    const icon = world ? "★" : champ ? "1st" : fin ? "2nd" : "✦";
+    const tier = world ? "World Championship" : e.level === "Regional" ? "State Championship" : e.level === "Signature" ? "Signature Event" : "Tournament";
+    return `
+      <li class="award ${world ? "award--world" : champ ? "award--champ" : ""}">
+        <span class="award__icon" aria-hidden="true">${icon}</span>
+        <p class="award__title">${esc(a.title)}<small>${esc(tier)}</small></p>
+        <p class="award__event">${esc(e.short)}${world && e.division ? `, ${esc(e.division)} Division` : ""}</p>
+        <p class="award__date">${esc(fmtDate(e.end))}<br>${esc(place(e))}</p>
+      </li>`;
+  }).join("") : `<li class="award award--none">No awards yet.</li>`;
+  riseIn($$(".award"), { y: 20, gap: 60 });
+}
+
+// ---------------------------------------------------- events: side scroll ----
+function finishLabel(e) {
+  const a = e.awards.find((x) => /Tournament (Champions|Finalists)/.test(x.raw));
+  if (a) return null;
+  return { Qualifications: "Quals only", "Round of 16": "Round of 16", Quarterfinalists: "Quarterfinals", Semifinalists: "Semifinals", Finalists: "Finalist", Champions: "Champions" }[e.finish] || e.finish;
+}
+
+function renderRail(S, changed) {
+  const track = $("#railTrack");
+  track.innerHTML = S.events.map((e) => {
+    const r = e.rank;
+    const lvl = { Signature: "Signature", World: "Worlds", Regional: "State" }[e.level];
+    const award = e.awards[0];
+    const fin = finishLabel(e);
+    const tag = award ? `<span class="chip chip--award">${esc(award.title)}</span>` : fin ? `<span class="chip">${esc(fin)}</span>` : `<span class="chip">${played(e).length ? "" : "No matches"}</span>`;
+    return `
+      <li>
+        <button class="ecard spot ${e.awards.length ? "ecard--award" : ""} ${e.level === "World" ? "ecard--world" : ""}" type="button" data-event="${e.id}">
+          <span class="ecard__date"><span>${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}</span>${lvl ? `<span class="ecard__lvl">${lvl}</span>` : ""}</span>
+          <span class="ecard__name">${esc(e.short)}</span>
+          <span class="ecard__where">${esc(place(e))}</span>
+          ${r ? `<span class="ecard__rank">${r.rank}<sup>${suffix(r.rank)}</sup></span><span class="ecard__rankk">Rank${e.division && !/^(Default|Default Division)$/.test(e.division) && e.division !== e.short ? ` · ${esc(e.division)}` : ""}</span>`
+              : `<span class="ecard__rank is-none">${played(e).length ? "Unranked" : "No results"}</span><span class="ecard__rankk">${e.note ? "" : ""}</span>`}
+          <span class="ecard__foot"><span>${r ? `Quals <b>${wl(r)}</b>` : "&nbsp;"}</span>${tag}</span>
+        </button>
+      </li>`;
+  }).join("");
+  for (const b of $$(".ecard", track)) b.addEventListener("click", () => openDrawer(eventById(Number(b.dataset.event))));
+  spotlight($$(".spot", track));
+  rail.measure();
+  if (changed && !reduced) animate($$(".ecard", track), { opacity: { from: 0, to: 1 }, translateX: { from: 60, to: 0 }, duration: 900, delay: stagger(50), ease: "outExpo" });
+  else riseIn($$(".ecard", track), { y: 40, gap: 60 });
+}
+
+// The rail pins while the page scrolls, and vertical scroll moves it sideways.
+const rail = (() => {
+  let section, track, bar, hint, extra = 0, x = 0, target = 0, pinned = false;
+  const measure = () => {
+    section ??= $("#events"); track ??= $("#railTrack"); bar ??= $("#railProgress"); hint ??= $("#railHint");
+    pinned = innerWidth > 900 && !reduced;
+    extra = Math.max(0, track.scrollWidth - innerWidth);
+    if (!pinned || extra < 40) { section.style.height = ""; track.style.transform = ""; x = target = 0; bar.style.transform = "scaleX(1)"; hint.textContent = "Click any event for its matches."; return; }
+    section.style.height = `${innerHeight + extra}px`;
+    hint.textContent = "Keep scrolling. Click any event for its matches.";
+  };
+  const tick = () => {
+    if (pinned && extra >= 40) {
+      const top = section.getBoundingClientRect().top;
+      const p = Math.min(1, Math.max(0, -top / extra));
+      target = -p * extra;
+      x += (target - x) * 0.14;
+      track.style.transform = `translate3d(${x.toFixed(2)}px,0,0)`;
+      bar.style.transform = `scaleX(${p})`;
+    }
+    requestAnimationFrame(tick);
+  };
+  return { measure, start: () => requestAnimationFrame(tick) };
+})();
+
+// Spotlight follows the pointer inside a card (ReactBits "SpotlightCard").
+function spotlight(els) {
+  for (const el of els) {
+    el.addEventListener("pointermove", (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+    });
+  }
+}
+
+// ---------------------------------------------------------------- drawer ----
+let lastFocus = null;
+function openDrawer(e) {
+  if (!e) return;
+  const dr = $("#drawer"), body = $("#drawerBody"), panel = $(".drawer__panel", dr);
+  const r = e.rank;
+  const chips = [
+    ...e.awards.map((a) => `<span class="chip chip--award">${esc(a.title)}</span>`),
+    finishLabel(e) ? `<span class="chip">${esc(finishLabel(e))}</span>` : "",
+    e.division && !/^(Default|Default Division)$/.test(e.division) ? `<span class="chip">${esc(e.division)}</span>` : "",
+  ].join("");
+  const rows = e.matches.map((m) => {
+    const res = m.played ? `<span class="res res--${m.result}">${m.result}</span>` : `<span class="res">–</span>`;
+    return `
+      <li class="mrow ${m.round > 2 ? "is-elim" : ""}">
+        <span class="mrow__label">${esc(m.round === 1 ? `P${m.num}` : m.label)}</span>
+        <span class="mrow__teams"><i class="dot dot--${m.color}" title="${m.color} alliance"></i>${m.partners.length ? `with <b>${esc(m.partners.join(", "))}</b>` : "solo"} <span>vs ${esc(m.opponents.join(", "))}</span></span>
+        <span class="mrow__score">${m.played ? `${m.us}–${m.them}` : "—"}${m.video ? `<a class="mrow__vid" href="https://www.youtube.com/watch?v=${esc(m.video)}" target="_blank" rel="noopener">▶ Video</a>` : ""}</span>
+        ${res}
+      </li>`;
+  }).join("");
+  body.innerHTML = `
+    <p class="dr__date">${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}${e.level !== "Other" ? ` · ${esc(e.level === "Regional" ? "State" : e.level)}` : ""}</p>
+    <h3 class="dr__title" id="drawerTitle">${esc(e.short)}</h3>
+    <p class="dr__where">${esc([e.venue !== e.city ? e.venue : "", place(e)].filter(Boolean).join(", "))}</p>
+    ${chips ? `<div class="dr__chips">${chips}</div>` : ""}
+    <dl class="dr__stats">
+      <div><dt>Rank</dt><dd>${r ? ordinal(r.rank) : "—"}</dd></div>
+      <div><dt>Quals</dt><dd>${r ? wl(r) : "—"}</dd></div>
+      <div><dt>Driver</dt><dd>${e.skills ? e.skills.driver : "—"}</dd></div>
+      <div><dt>Auton</dt><dd>${e.skills ? e.skills.programming : "—"}</dd></div>
+    </dl>
+    ${e.note ? `<p class="dr__note">${esc(e.note)}</p>` : ""}
+    ${rows ? `<ol class="mlist">${rows}</ol>` : `<p class="dr__note">No matches were recorded for us at this event.</p>`}
+    <a class="dr__link" href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.sku)} on VEX Events ↗</a>`;
+
+  lastFocus = document.activeElement;
+  dr.hidden = false;
+  lenis?.stop();
+  document.documentElement.style.overflow = "hidden";
+  panel.scrollTop = 0;
+  $(".drawer__close", dr).focus();
+  if (!reduced) {
+    animate($(".drawer__scrim", dr), { opacity: { from: 0, to: 1 }, duration: 400, ease: "outQuad" });
+    animate(panel, { translateX: { from: "100%", to: "0%" }, duration: 700, ease: "outExpo" });
+    // match rows drop in one after another (ReactBits "AnimatedList")
+    animate($$(".mrow", panel), { opacity: { from: 0, to: 1 }, translateY: { from: 16, to: 0 }, scale: { from: 0.98, to: 1 }, duration: 600, delay: stagger(30, { start: 250 }), ease: "outExpo" });
+  }
+}
+
+function closeDrawer() {
+  const dr = $("#drawer"), panel = $(".drawer__panel", dr);
+  if (dr.hidden) return;
+  const done = () => { dr.hidden = true; panel.style.transform = ""; document.documentElement.style.overflow = ""; lenis?.start(); lastFocus?.focus?.(); };
+  if (reduced) return done();
+  animate($(".drawer__scrim", dr), { opacity: 0, duration: 300, ease: "outQuad" });
+  animate(panel, { translateX: "100%", duration: 450, ease: "inQuart", onComplete: done });
+}
+
+function drawer() {
+  const dr = $("#drawer");
+  dr.addEventListener("click", (e) => { if (e.target.closest("[data-close]")) closeDrawer(); });
+  document.addEventListener("keydown", (e) => {
+    if (dr.hidden) return;
+    if (e.key === "Escape") closeDrawer();
+    if (e.key === "Tab") { // keep focus inside the panel
+      const f = $$("a[href], button", $(".drawer__panel", dr));
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+}
+
+// ------------------------------------------------------------------ kpis ----
+function renderKpis(S, changed) {
+  const T = S.totals;
+  const k = [
+    { k: "Win rate", v: pct(T.wins, T.losses, T.ties), dec: 1, unit: "%", sub: `${T.wins}–${T.losses} in ${T.matches} matches` },
+    { k: "Avg score", v: T.avg ?? 0, dec: 1, sub: "our alliance" },
+    { k: "Avg margin", v: Math.abs(T.margin ?? 0), dec: 1, pre: (T.margin ?? 0) >= 0 ? "+" : "−", sub: (T.margin ?? 0) >= 0 ? "points per match" : "points behind" },
+    { k: "High score", v: T.high ?? 0, sub: "best alliance score" },
+    { k: "Driver skills", v: T.driver?.score ?? 0, sub: eventById(T.driver?.event)?.short ?? "—" },
+    { k: "Auton skills", v: T.programming?.score ?? 0, sub: eventById(T.programming?.event)?.short ?? "—" },
+  ];
+  const el = $("#kpis");
+  el.innerHTML = k.map((c) => `
+    <div class="kpi"><dt>${esc(c.k)}</dt><dd>${c.pre ?? ""}<span data-count="${c.v}" data-dec="${c.dec ?? 0}">${Number(c.v).toFixed(c.dec ?? 0)}</span>${c.unit ? `<small>${c.unit}</small>` : ""}</dd><p>${esc(c.sub)}</p></div>`).join("");
+  if (changed) $$("[data-count]", el).forEach((n, i) => countUp(n, { delay: i * 40 }));
+  else counters(el);
 }
 
 // ----------------------------------------------------------------- chart ----
 const SVGNS = "http://www.w3.org/2000/svg";
 let chartSeen = false;
-let chartSeason = null;
 
-// A bar anchored on the baseline with 4px rounding only on its free end.
+// A bar anchored on the baseline with rounding only on its free end.
 function barPath(x, y0, w, h, up) {
   if (h <= 0) return "";
   const r = Math.min(4, w / 2, h);
-  if (up) {
-    const y = y0 - h;
-    return `M${x},${y0}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y0}Z`;
-  }
+  if (up) { const y = y0 - h; return `M${x},${y0}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y0}Z`; }
   const y = y0 + h;
   return `M${x},${y0}V${y - r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y - r}V${y0}Z`;
 }
 
-function renderChart(S, animate) {
+function growBars() {
+  if (reduced) return;
+  const svg = $("#chart");
+  animate($$(".bar-us", svg), { scaleY: { from: 0, to: 1 }, duration: 900, delay: stagger(5), ease: "outExpo" });
+  animate($$(".bar-them", svg), { scaleY: { from: 0, to: 1 }, duration: 900, delay: stagger(5, { start: 80 }), ease: "outExpo" });
+  animate($$(".elim", svg), { scale: { from: 0, to: 1 }, duration: 600, delay: stagger(20, { start: 500 }), ease: "outBack" });
+}
+
+function renderChart(S, changed) {
   const svg = $("#chart");
   const scroll = $("#chartScroll");
-  const matches = S.events.flatMap((e) => e.matches.filter((m) => m.played && m.round !== 1).map((m) => ({ ...m, ev: e })));
+  const matches = S.events.flatMap((e) => played(e).map((m) => ({ ...m, ev: e })));
   svg.innerHTML = "";
   if (!matches.length) return;
 
   const H = 380, top = 52, bottom = 22, left = 44, right = 18;
-  const avail = Math.max(320, scroll.clientWidth - 4);
+  const avail = Math.max(320, scroll.clientWidth - 2);
   const minSlot = innerWidth >= 900 ? 8 : 13;
   const slot = Math.min(120, Math.max(minSlot, (avail - left - right) / matches.length));
   const W = Math.max(avail, left + right + slot * matches.length);
@@ -234,7 +430,7 @@ function renderChart(S, animate) {
   svg.setAttribute("height", H);
   svg.style.width = `${W}px`;
 
-  const g = (cls) => { const n = document.createElementNS(SVGNS, "g"); if (cls) n.setAttribute("class", cls); svg.append(n); return n; };
+  const g = () => { const n = document.createElementNS(SVGNS, "g"); svg.append(n); return n; };
   const el = (parent, tag, attrs, text) => {
     const n = document.createElementNS(SVGNS, tag);
     for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
@@ -243,12 +439,10 @@ function renderChart(S, animate) {
     return n;
   };
 
-  // event bands and labels
-  const bands = g();
-  const labels = g();
+  const bands = g(), labels = g();
   let i = 0;
   S.events.forEach((e, ei) => {
-    const n = e.matches.filter((m) => m.played && m.round !== 1).length;
+    const n = played(e).length;
     if (!n) return;
     const x = left + i * slot, w = n * slot;
     el(bands, "rect", { x, y: top - 34, width: w, height: H - top + 34 - bottom + 4, class: `ev-band${ei % 2 ? " alt" : ""}`, "data-ev": e.id });
@@ -256,12 +450,10 @@ function renderChart(S, animate) {
     const chars = Math.floor((w - 10) / 6.7);
     const name = e.short.length <= chars ? e.short : chars >= 5 ? e.short.slice(0, chars - 1).trimEnd() + "…" : "";
     if (name) el(labels, "text", { x: x + 6, y: top - 20, class: "ev-label" }, name);
-    const mo = MONTHS[ymd(e.start)[1] - 1];
-    if (w > 30) el(labels, "text", { x: x + 6, y: top - 7 }, `${mo}${e.awards.length ? " ★" : ""}`);
+    if (w > 30) el(labels, "text", { x: x + 6, y: top - 7 }, `${MONTHS[ymd(e.start)[1] - 1]}${e.awards.length ? " ★" : ""}`);
     i += n;
   });
 
-  // grid
   const grid = g();
   for (let v = step; v <= ceil; v += step) {
     for (const s of [-1, 1]) {
@@ -272,23 +464,19 @@ function renderChart(S, animate) {
   }
   el(grid, "text", { x: left - 8, y: y0 + 4, "text-anchor": "end" }, "0");
 
-  // bars
   const marks = g();
   matches.forEach((m, k) => {
     const cx = left + k * slot + slot / 2;
     const grp = el(marks, "g", { class: "m", "data-k": k, "data-ev": m.ev.id });
-    el(grp, "path", { d: barPath(cx - bw / 2, y0 - 1, bw, sc(m.us), true), class: "bar-us grow up", style: `transition-delay:${k * 6}ms` });
-    el(grp, "path", { d: barPath(cx - bw / 2, y0 + 1, bw, sc(m.them), false), class: "bar-them grow down", style: `transition-delay:${k * 6}ms` });
-    if (m.round !== 2) el(grp, "circle", { cx, cy: y0 - sc(m.us) - 9, r: 4, class: "elim" });
+    el(grp, "path", { d: barPath(cx - bw / 2, y0 - 1, bw, sc(m.us), true), class: "bar-us", style: "transform-box:fill-box;transform-origin:50% 100%" });
+    el(grp, "path", { d: barPath(cx - bw / 2, y0 + 1, bw, sc(m.them), false), class: "bar-them", style: "transform-box:fill-box;transform-origin:50% 0%" });
+    if (m.round !== 2) el(grp, "circle", { cx, cy: y0 - sc(m.us) - 9, r: 4, class: "elim", style: "transform-box:fill-box;transform-origin:center" });
   });
   el(svg, "line", { x1: left, x2: W - right, y1: y0, y2: y0, class: "base" });
 
-  // hit targets, wider than the marks
   const hits = g();
   hits.setAttribute("aria-hidden", "true");
-  matches.forEach((m, k) => {
-    el(hits, "rect", { x: left + k * slot, y: top - 34, width: slot, height: H - top + 34 - bottom, class: "hit", "data-k": k });
-  });
+  matches.forEach((m, k) => el(hits, "rect", { x: left + k * slot, y: top - 34, width: slot, height: H - top + 34 - bottom, class: "hit", "data-k": k }));
 
   const tip = $("#tip");
   const fig = svg.closest(".chart");
@@ -306,119 +494,24 @@ function renderChart(S, animate) {
     tip.hidden = false;
     const hr = $(`.hit[data-k="${k}"]`, svg).getBoundingClientRect();
     const fr = fig.getBoundingClientRect();
-    const tw = tip.offsetWidth;
     let x = hr.left - fr.left + hr.width / 2 + 14;
-    if (x + tw > fr.width) x = hr.left - fr.left + hr.width / 2 - tw - 14;
-    const sr = scroll.getBoundingClientRect();
+    if (x + tip.offsetWidth > fr.width) x = hr.left - fr.left + hr.width / 2 - tip.offsetWidth - 14;
     tip.style.left = `${Math.max(0, x)}px`;
-    tip.style.top = `${sr.top - fr.top + 56}px`;
+    tip.style.top = `${scroll.getBoundingClientRect().top - fr.top + 56}px`;
   };
-  const hide = () => {
-    svg.classList.remove("is-hovering");
-    $$(".is-hot", svg).forEach((n) => n.classList.remove("is-hot"));
-    tip.hidden = true;
-  };
+  const hide = () => { svg.classList.remove("is-hovering"); $$(".is-hot", svg).forEach((n) => n.classList.remove("is-hot")); tip.hidden = true; };
   hits.addEventListener("pointerover", (e) => { const k = e.target.dataset.k; if (k != null) show(Number(k)); });
   hits.addEventListener("pointerleave", hide);
   svg.onpointerleave = hide;
   scroll.onscroll = hide;
+  scroll.scrollLeft = 0;
 
-  // grow in: on first view, and whenever the season changes
-  if (!reduced && (!chartSeen || animate)) {
-    svg.classList.add("is-pre");
-    if (chartSeen) requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.remove("is-pre")));
+  if (reduced) return;
+  if (changed && chartSeen) growBars();
+  else if (!chartSeen) {
+    $$(".bar-us, .bar-them, .elim", svg).forEach((n) => (n.style.transform = "scale(1, 0)"));
+    onView(scroll, () => { chartSeen = true; growBars(); });
   }
-  // open on the newest matches when the chart is wider than the screen
-  if (chartSeason !== season) scroll.scrollLeft = 0;
-  chartSeason = season;
-}
-
-// -------------------------------------------------------------- timeline ----
-function finishChip(e) {
-  if (!e.finish || e.awards.some((a) => /Tournament (Champions|Finalists)/.test(a.raw))) return "";
-  const label = { Qualifications: "Qualifications only" }[e.finish] || e.finish;
-  return `<span class="chip chip--finish">${esc(label)}</span>`;
-}
-
-function matchRows(e) {
-  if (!e.matches.length) return `<p class="ev__note">No matches were recorded for us at this event.</p>`;
-  const rows = e.matches.map((m) => {
-    const t = m.time ? m.time.slice(11, 16) : "";
-    const score = m.played ? `${m.us}–${m.them}` : "—";
-    const res = m.played ? `<span class="res res--${m.result}">${m.result}</span>` : `<span class="muted">—</span>`;
-    const vid = m.video ? `<a class="vid-link" href="https://www.youtube.com/watch?v=${esc(m.video)}" target="_blank" rel="noopener">Watch ↗</a>` : "";
-    return `
-      <tr class="${m.round === 2 || m.round === 1 ? "" : "is-elim"}">
-        <td class="num">${esc(m.round === 1 ? `Practice ${m.num}` : m.label)}</td>
-        <td class="col-field muted num">${esc(t)}</td>
-        <td><span class="ally"><i class="dot dot--${m.color}" title="${m.color} alliance"></i>${m.partners.length ? `<span class="w">with </span>${esc(m.partners.join(", "))}` : "solo"}</span></td>
-        <td>${esc(m.opponents.join(", "))}</td>
-        <td class="score">${score}</td>
-        <td>${res}</td>
-        <td>${vid}</td>
-      </tr>`;
-  }).join("");
-  return `
-    <div class="mtable-wrap">
-      <table class="mtable">
-        <thead><tr><th>Match</th><th class="col-field">Time</th><th>Alliance</th><th>Opponents</th><th>Score</th><th>Result</th><th><span class="sr">Video</span></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
-}
-
-function renderTimeline(S) {
-  const ol = $("#timeline");
-  ol.innerHTML = S.events.map((e) => {
-    const [y] = ymd(e.start);
-    const r = e.rank;
-    const awards = e.awards.map((a) => `<span class="chip chip--award">${esc(a.title)}</span>`).join("");
-    const none = !e.matches.some((m) => m.played) ? `<span class="chip">${e.matches.length ? "Unscored" : "No matches"}</span>` : "";
-    const lvl = { Signature: "Signature", World: "Worlds", Regional: "State" }[e.level];
-    const pid = `ev-${e.id}`;
-    return `
-      <li class="ev${e.awards.length ? " ev--award" : ""}${e.level === "World" ? " ev--world" : ""}" data-reveal>
-        <button class="ev__row" type="button" data-cursor="Open" aria-expanded="false" aria-controls="${pid}">
-          <span class="ev__date"><b>${esc(fmtRange(e.start, e.end))}</b>${y}</span>
-          <span class="ev__node" aria-hidden="true"></span>
-          <span class="ev__main">
-            <span class="ev__name">${esc(e.short)}${lvl ? `<span class="ev__level">${lvl}</span>` : ""}</span>
-            <span class="ev__where" style="display:block">${esc(place(e))}${e.division && !/^(Default|Division 1|Middle School|Default Division)$/.test(e.division) && e.division !== e.short ? ` · ${esc(e.division)}` : ""}</span>
-            <span class="ev__badges">${awards}${finishChip(e)}${none}</span>
-          </span>
-          <span class="ev__stats">
-            ${r ? `<span class="stat"><span class="stat__v">${ordinal(r.rank)}</span><span class="stat__k">Rank</span></span>
-            <span class="stat stat--record"><span class="stat__v">${r.w}–${r.l}${r.t ? `–${r.t}` : ""}</span><span class="stat__k">Quals</span></span>` : ""}
-            ${e.skills ? `<span class="stat stat--skills"><span class="stat__v">${e.skills.driver + e.skills.programming}</span><span class="stat__k">Skills</span></span>` : ""}
-            <span class="ev__toggle" aria-hidden="true"></span>
-          </span>
-        </button>
-        <div class="ev__panel" id="${pid}">
-          <div class="ev__inner">
-            <div class="ev__body">
-              ${e.note ? `<p class="ev__note">${esc(e.note)}</p>` : ""}
-              <p class="ev__extra">
-                ${e.venue && e.venue !== e.city ? `<span>${esc(e.venue)}</span>` : ""}
-                ${e.skills ? `<span>Skills <b>${e.skills.driver}</b> driver · <b>${e.skills.programming}</b> auton · ${ordinal(e.skills.rank)}</span>` : ""}
-                ${r ? `<span>WP <b>${r.wp}</b> · AP <b>${r.ap}</b> · SP <b>${r.sp}</b></span><span>Avg <b>${r.avg}</b> · High <b>${r.high}</b></span>` : ""}
-                <a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.sku)} ↗</a>
-              </p>
-              ${matchRows(e)}
-            </div>
-          </div>
-        </div>
-      </li>`;
-  }).join("");
-
-  for (const li of $$(".ev", ol)) {
-    const btn = $(".ev__row", li);
-    btn.addEventListener("click", () => {
-      const open = !li.classList.contains("is-open");
-      li.classList.toggle("is-open", open);
-      btn.setAttribute("aria-expanded", open);
-    });
-  }
-  observeReveals(ol);
 }
 
 // ---------------------------------------------------------------- worlds ----
@@ -427,21 +520,25 @@ function renderWorlds() {
   if (!e) return;
   const r = e.rank;
   const facts = [
-    ["Division", e.division],
-    ["Rank", r ? `${ordinal(r.rank)}` : "—"],
-    ["Record", r ? `${r.w}–${r.l}` : "—"],
-    ["Average score", r ? r.avg : "—"],
-    ["Driver skills", e.skills ? e.skills.driver : "—"],
-    ["Auton skills", e.skills ? e.skills.programming : "—"],
+    ["Division", e.division], ["Rank", r ? ordinal(r.rank) : "—"], ["Record", r ? wl(r) : "—"],
+    ["Avg score", r ? r.avg : "—"], ["Driver skills", e.skills?.driver ?? "—"], ["Auton skills", e.skills?.programming ?? "—"],
   ];
   $("#worldsFacts").innerHTML = facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("");
-  const q = e.matches.filter((m) => m.round === 2 && m.played);
-  $("#worldsStrip").innerHTML = q.map((m, i) => `
-    <li class="${m.result}" style="--i:${i}" title="${esc(`${m.label}: with ${m.partners.join(", ")} vs ${m.opponents.join(", ")}`)}">
+  const q = played(e).filter((m) => m.round === 2);
+  const strip = $("#worldsStrip");
+  strip.innerHTML = q.map((m) => `
+    <li class="${m.result}" title="${esc(`${m.label}: with ${m.partners.join(", ")} vs ${m.opponents.join(", ")}`)}">
       <span class="s-res">${m.result === "W" ? "WIN" : m.result === "L" ? "LOSS" : "TIE"}</span>
       <span class="s-score">${m.us}<span>–${m.them}</span></span>
       <span class="s-q">${esc(m.label)}</span>
     </li>`).join("");
+  const tiles = $$("li", strip);
+  if (reduced) return;
+  tiles.forEach((t) => (t.style.opacity = 0));
+  onView(strip, () => animate(tiles, {
+    opacity: { from: 0, to: 1 }, translateY: { from: 40, to: 0 }, rotate: { from: (_, i) => (i % 2 ? 6 : -6), to: 0 },
+    duration: 900, delay: stagger(70, { from: "center" }), ease: "outBack(1.4)",
+  }));
 }
 
 // ---------------------------------------------------------------- videos ----
@@ -453,29 +550,26 @@ function findMatch(eventId, key) {
 }
 
 function renderVideos() {
-  $("#videoGrid").innerHTML = D.videos.map((v, i) => {
+  $("#videoGrid").innerHTML = D.videos.map((v) => {
     const { e, m } = findMatch(v.event, v.match);
-    const sname = e ? D.seasons[e.season].name : "";
-    const res = m && m.played ? `<b>${m.result === "W" ? "Won" : "Lost"} ${m.us}–${m.them}</b>` : "";
+    const res = m?.played ? `<span class="vid__res ${m.result}">${m.result === "W" ? "W" : "L"} ${m.us}–${m.them}</span>` : "";
     return `
-      <figure class="vid" data-reveal style="transition-delay:${(i % 3) * 70}ms">
-        <button class="vid__frame" type="button" data-cursor="Play" data-yt="${esc(v.id)}" aria-label="Play: ${esc(v.title)}">
-          <img src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360" />
-          <span class="vid__play">${m ? esc(m.label) : "Play"}</span>
+      <li class="vid">
+        <button class="vid__frame" type="button" data-yt="${esc(v.id)}" aria-label="Play: ${esc(v.title)}">
+          <img src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360" draggable="false" />
+          <span class="vid__play" aria-hidden="true"></span>${res}
         </button>
         <figcaption>
           <p class="vid__t">${esc(v.title)}</p>
-          <p class="vid__m">${[sname, e ? fmtDate(e.start) : "", res, m?.partners?.length ? `with ${esc(m.partners.join(", "))}` : ""].filter(Boolean).join(" · ")}</p>
-          <p class="vid__m">via ${esc(v.channel)}</p>
+          <p class="vid__m">${[e ? fmtDate(e.start) : "", m?.partners?.length ? `with ${esc(m.partners.join(", "))}` : "", `via ${esc(v.channel)}`].filter(Boolean).join(" · ")}</p>
         </figcaption>
-      </figure>`;
+      </li>`;
   }).join("");
-  $("#streamList").innerHTML = D.streams.map((s) =>
-    `<li><a href="https://www.youtube.com/watch?v=${esc(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a><span>${esc(s.channel)}</span></li>`).join("");
+  $("#streamList").innerHTML = `Full livestreams: ${D.streams.map((s) => `<a href="https://www.youtube.com/watch?v=${esc(s.id)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join(" · ")}`;
 
   $("#videoGrid").addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-yt]");
-    if (!b || b.dataset.playing) return;
+    if (!b || b.dataset.playing || carouselDragged) return;
     b.dataset.playing = "1";
     const f = document.createElement("iframe");
     f.src = `https://www.youtube-nocookie.com/embed/${b.dataset.yt}?autoplay=1&rel=0&modestbranding=1`;
@@ -484,36 +578,115 @@ function renderVideos() {
     f.allowFullscreen = true;
     b.replaceChildren(f);
   });
+  riseIn($$(".vid"), { y: 30, gap: 80 });
+}
+
+// Drag the video row sideways with the mouse; arrows step one card at a time.
+let carouselDragged = false;
+function carousel() {
+  const el = $("#videoRail"), prev = $("#vidPrev"), next = $("#vidNext");
+  const step = () => ($(".vid", el)?.offsetWidth ?? 400) + 18;
+  const update = () => {
+    prev.disabled = el.scrollLeft < 4;
+    next.disabled = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+  };
+  prev.addEventListener("click", () => el.scrollBy({ left: -step(), behavior: "smooth" }));
+  next.addEventListener("click", () => el.scrollBy({ left: step(), behavior: "smooth" }));
+  el.addEventListener("scroll", update, { passive: true });
+  addEventListener("resize", update);
+  update();
+
+  let down = false, startX = 0, startLeft = 0;
+  el.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    down = true; carouselDragged = false; startX = e.clientX; startLeft = el.scrollLeft;
+  });
+  addEventListener("pointermove", (e) => {
+    if (!down) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 5) { carouselDragged = true; el.classList.add("is-dragging"); }
+    el.scrollLeft = startLeft - dx;
+  });
+  addEventListener("pointerup", () => {
+    if (!down) return;
+    down = false;
+    el.classList.remove("is-dragging");
+    setTimeout(() => (carouselDragged = false), 0);
+  });
 }
 
 // ------------------------------------------------------------------- aoe ----
 function renderAoeNotes(S) {
-  const ms = S.events.flatMap((e) => e.matches.filter((m) => m.played && m.round !== 1));
+  const ms = S.events.flatMap(played);
   const aoe = (t) => /^20850[A-Z]$/.test(t) && t !== TEAM;
   const withAoe = ms.filter((m) => m.partners.some(aoe)).length;
   const vsAoe = ms.filter((m) => m.opponents.some(aoe)).length;
   const sibs = new Set(ms.flatMap((m) => [...m.partners, ...m.opponents]).filter(aoe));
-  $("#aoeSiblings").innerHTML = ms.length ? `
-    <dt>AOE teams in ${esc(S.name)}</dt>
-    <dd>We played <b>${ms.length}</b> matches. In <b>${withAoe}</b> of them our partner was another AOE team, and in <b>${vsAoe}</b> we played against one. That's <b>${sibs.size}</b> different 20850 teams.</dd>` : `
-    <dt>${esc(S.name)}</dt><dd>We haven't played any matches yet this season.</dd>`;
-
+  $("#aoeSiblings").innerHTML = ms.length
+    ? `<dt>AOE teams in ${esc(S.name)}</dt><dd>We played <b>${ms.length}</b> matches. In <b>${withAoe}</b> of them our partner was another AOE team, and in <b>${vsAoe}</b> we played against one. That's <b>${sibs.size}</b> different 20850 teams.</dd>`
+    : `<dt>${esc(S.name)}</dt><dd>We haven't played any matches yet this season.</dd>`;
   const home = allEvents().filter((e) => /^AOE Robotics/.test(e.short) && e.rank);
-  $("#aoeHome").innerHTML = `
-    <dt>At AOE's own events</dt>
-    <dd>${home.map((e) => `<b>${esc(e.short)}</b> (${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}): ${ordinal(e.rank.rank)} after quals, ${e.finish === "Qualifications" ? "didn't make elims" : `out in the ${esc(({ "Round of 16": "round of 16", Quarterfinalists: "quarterfinals", Semifinalists: "semifinals" })[e.finish] || (e.finish || "").toLowerCase())}`}.`).join(" ") || "Results will appear here."}</dd>`;
+  const out = (f) => ({ "Round of 16": "out in the round of 16", Quarterfinalists: "out in the quarterfinals", Semifinalists: "out in the semifinals", Qualifications: "didn't make elims" })[f] || (f || "").toLowerCase();
+  $("#aoeHome").innerHTML = `<dt>At AOE's own events</dt><dd>${home.map((e) => `<b>${esc(e.short)}</b> (${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}): ${ordinal(e.rank.rank)} after quals, ${esc(out(e.finish))}.`).join(" ") || "Results will show up here."}</dd>`;
 }
 
 // ------------------------------------------------------------------ hero ----
+// Letters rise into place (ReactBits "SplitText").
+function heroIntro() {
+  const title = $("#heroTitle");
+  if (reduced) return;
+  const { chars } = splitText(title, { chars: true });
+  chars.forEach((c) => c.classList.add("char"));
+  animate(chars, {
+    opacity: { from: 0, to: 1 }, translateY: { from: "45%", to: "0%" }, rotate: { from: 8, to: 0 },
+    filter: { from: "blur(14px)", to: "blur(0px)" },
+    duration: 1300, delay: stagger(50, { start: 150 }), ease: "outExpo",
+  });
+  animate([".hero__tag", ".hero__lede", ".hero__actions", ".hero__art"], {
+    opacity: { from: 0, to: 1 }, translateY: { from: 24, to: 0 }, duration: 1100, delay: stagger(110, { start: 350 }), ease: "outExpo",
+  });
+}
+
+// The highlighted phrase cycles through real results (ReactBits "RotatingText").
+function rotator() {
+  const el = $("#rotator");
+  const phrases = [];
+  for (const e of [...allEvents()].reverse()) for (const a of e.awards) {
+    const t = a.title.replace(/^Tournament /, "");
+    phrases.push(e.level === "World" ? `${t} at Worlds` : `${t} at ${e.short}`);
+  }
+  const cur = D.seasons[D.seasonOrder[D.seasonOrder.length - 1]];
+  const last = cur?.events.filter((e) => e.rank).pop();
+  if (last) phrases.unshift(`${wl(last.rank)} at ${last.short.split(" · ")[0]}`);
+  if (!phrases.length) return;
+  // letters are grouped per word so a long phrase can still wrap on a phone
+  const chars = (t) => t.split(" ").map((w) => `<span class="rw">${[...w].map((c) => `<span class="char">${esc(c)}</span>`).join("")}</span>`).join(" ");
+  let i = 0;
+  el.innerHTML = chars(phrases[0]);
+  if (reduced || phrases.length < 2) return;
+  setInterval(async () => {
+    if (document.hidden) return;
+    const w0 = el.offsetWidth;
+    await animate($$(".char", el), { translateY: "-120%", opacity: 0, duration: 380, delay: stagger(12), ease: "inQuad" });
+    i = (i + 1) % phrases.length;
+    el.style.width = "";
+    el.innerHTML = chars(phrases[i]);
+    const w1 = el.offsetWidth;
+    el.style.width = `${w0}px`;
+    animate(el, { width: w1, duration: 500, ease: "outExpo", onComplete: () => (el.style.width = "") });
+    animate($$(".char", el), { translateY: { from: "120%", to: "0%" }, opacity: { from: 0, to: 1 }, duration: 600, delay: stagger(16), ease: "outExpo" });
+  }, 3200);
+}
+
 // The logo drifts a few pixels against the pointer.
 const pointer = { x: 0.7, y: 0.55, tx: 0.7, ty: 0.55 };
 function heroMotion() {
-  const hero = $(".hero"), art = $("#heroArt");
+  const hero = $(".hero"), art = $(".hero__logo");
   hero.addEventListener("pointermove", (e) => {
     const hr = hero.getBoundingClientRect();
     pointer.tx = (e.clientX - hr.left) / hr.width;
     pointer.ty = 1 - (e.clientY - hr.top) / hr.height;
-    if (reduced || !matchMedia("(pointer: fine)").matches) return;
+    if (reduced || !finePointer) return;
     const ar = art.getBoundingClientRect();
     const dx = (e.clientX - (ar.left + ar.width / 2)) / innerWidth;
     const dy = (e.clientY - (ar.top + ar.height / 2)) / innerHeight;
@@ -551,7 +724,7 @@ function flow() {
       float pull = exp(-length(p - m) * 2.2);
       r += 0.22 * pull;
       float f = fbm(p + 3.0 * r);
-      vec3 cream = vec3(0.984, 0.965, 0.925);
+      vec3 cream = vec3(0.965, 0.961, 0.949);
       vec3 gold  = vec3(1.0, 0.722, 0.11);
       vec3 flame = vec3(1.0, 0.333, 0.2);
       vec3 sky   = vec3(0.42, 0.58, 1.0);
@@ -603,135 +776,107 @@ function flow() {
   document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
 }
 
-// ---------------------------------------------------------------- themes ----
-// The section crossing the middle of the screen sets the page's colors.
-const THEME_COLOR = { cream: "#FBF6EC", gold: "#FFC23A", night: "#121010", sky: "#D3E2FF", flame: "#FF5533" };
-function themes() {
-  const meta = $('meta[name="theme-color"]');
-  const io = new IntersectionObserver((ents) => {
-    for (const en of ents) {
-      if (!en.isIntersecting) continue;
-      const t = en.target.dataset.theme;
-      if (document.body.dataset.theme !== t) {
-        document.body.dataset.theme = t;
-        meta?.setAttribute("content", THEME_COLOR[t] || THEME_COLOR.cream);
-      }
-    }
-  }, { rootMargin: "-50% 0px -50% 0px" });
-  for (const el of $$("main [data-theme], footer[data-theme]")) io.observe(el);
+// Team number scrambles before it settles (ReactBits "DecryptedText").
+function decrypt(el) {
+  const final = el.dataset.final ?? (el.dataset.final = el.textContent);
+  const pool = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&";
+  let frame = 0;
+  clearInterval(el._dec);
+  el._dec = setInterval(() => {
+    const done = Math.floor(frame / 2);
+    el.textContent = [...final].map((c, i) => (i < done ? c : pool[(Math.random() * pool.length) | 0])).join("");
+    if (done >= final.length) { clearInterval(el._dec); el.textContent = final; }
+    frame++;
+  }, 40);
 }
 
-// --------------------------------------------------------------- marquees ----
-// Two endless tracks: results under the hero, the wordmark in the footer.
-// They drift on their own and pick up speed (and direction) from scrolling.
-let scrollVel = 0;
-function marquees() {
-  const evs = allEvents();
-  const items = [];
-  for (const e of [...evs].reverse()) for (const a of e.awards) items.push(`<b>${esc(a.title)}</b> ${esc(e.short)}`);
-  for (const sid of [...D.seasonOrder].reverse()) {
-    const S = D.seasons[sid], T = S.totals;
-    if (!T.matches) continue;
-    items.push(`<b>${T.wins}–${T.losses}</b> ${esc(S.name)} record`);
-    if (T.driver) items.push(`<b>${T.driver.score}</b> ${esc(S.name)} driver skills`);
+// Buttons drift toward the pointer (ReactBits "Magnet").
+function magnet() {
+  if (reduced || !finePointer) return;
+  for (const b of $$("[data-magnet]")) {
+    b.addEventListener("pointermove", (e) => {
+      const r = b.getBoundingClientRect();
+      utils.set(b, { translateX: (e.clientX - (r.left + r.width / 2)) * 0.25, translateY: (e.clientY - (r.top + r.height / 2)) * 0.35 });
+    });
+    b.addEventListener("pointerleave", () => animate(b, { translateX: 0, translateY: 0, duration: 700, ease: "outElastic(1, .5)" }));
   }
-  const world = evs.find((e) => e.level === "World");
-  if (world?.rank) items.push(`<b>${ordinal(world.rank.rank)}</b> ${esc(world.division)} Division, Worlds`);
-  const line = items.map((t) => `<span class="marquee__item"><i class="marquee__star" aria-hidden="true"></i>${t}</span>`).join("");
-  $("#marquee").innerHTML = line + line;
+}
 
-  const mark = `<span class="wordmark__item">Lucky Cats <img src="assets/img/logo.webp" alt="" /> <span class="o">20850C</span> <img src="assets/img/logo.webp" alt="" /></span>`;
-  $("#wordmark").innerHTML = mark.repeat(4);
-
-  const tracks = [
-    { el: $("#marquee"), x: 0, speed: 0.6, dir: -1 },
-    { el: $("#wordmark"), x: 0, speed: 0.45, dir: 1 },
-  ];
-  let lastY = scrollY;
-  addEventListener("scroll", () => { scrollVel += scrollY - lastY; lastY = scrollY; }, { passive: true });
+// Little gold sparks fly out where you click (ReactBits "ClickSpark").
+function clickSpark() {
   if (reduced) return;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("[data-spark]") || !e.clientX) return;
+    const sparks = Array.from({ length: 8 }, (_, i) => {
+      const s = document.createElement("span");
+      s.className = "spark";
+      s.style.left = `${e.clientX - 1}px`;
+      s.style.top = `${e.clientY - 10}px`;
+      s.dataset.a = (i / 8) * Math.PI * 2;
+      document.body.append(s);
+      return s;
+    });
+    animate(sparks, {
+      translateX: (el) => Math.cos(+el.dataset.a) * 34,
+      translateY: (el) => Math.sin(+el.dataset.a) * 34,
+      rotate: (el) => (+el.dataset.a * 180) / Math.PI + 90,
+      scaleY: { from: 1, to: 0 }, opacity: { from: 1, to: 0 },
+      duration: 550, ease: "outQuart",
+      onComplete: () => sparks.forEach((s) => s.remove()),
+    });
+  });
+}
+
+// Two rows of big type that speed up with scrolling (ReactBits "ScrollVelocity").
+function scrollVelocity() {
+  const rows = $$(".velocity__row");
+  const item = `<span class="velocity__item">Lucky Cats <i class="velocity__dot"></i> 20850C <img src="assets/img/logo.webp" alt="" /> Rockville, MD <i class="velocity__dot"></i></span>`;
+  for (const r of rows) $(".velocity__track", r).innerHTML = item.repeat(4);
+  if (reduced) return;
+  let vel = 0, lastY = scrollY;
+  addEventListener("scroll", () => { vel += scrollY - lastY; lastY = scrollY; }, { passive: true });
+  const state = rows.map((r) => ({ el: $(".velocity__track", r), dir: Number(r.dataset.dir), x: 0 }));
   let prev = performance.now();
   const tick = (now) => {
     const dt = Math.min(48, now - prev) / 16.67;
     prev = now;
-    scrollVel *= 0.9;
-    const boost = Math.min(8, Math.abs(scrollVel) * 0.12);
-    const sign = scrollVel < -0.5 ? -1 : 1;
-    for (const t of tracks) {
-      const half = t.el.scrollWidth / 2;
-      t.x += t.dir * sign * (t.speed + boost) * dt;
-      if (t.x <= -half) t.x += half;
-      if (t.x > 0) t.x -= half;
-      t.el.style.transform = `translate3d(${t.x}px,0,0)`;
+    vel *= 0.88;
+    const boost = Math.min(10, Math.abs(vel) * 0.15);
+    const sign = vel < -0.5 ? -1 : 1;
+    for (const s of state) {
+      const half = s.el.scrollWidth / 2;
+      s.x += s.dir * sign * (0.5 + boost) * dt;
+      if (s.x <= -half) s.x += half;
+      if (s.x > 0) s.x -= half;
+      s.el.style.transform = `translate3d(${s.x}px,0,0)`;
     }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }
 
-// ----------------------------------------------------------- split words ----
-function splitHeadings() {
-  for (const h of $$(".sh__main h2, .cta__title")) {
-    const words = h.textContent.trim().split(/\s+/);
-    h.setAttribute("aria-label", h.textContent.trim());
-    h.classList.add("words");
-    h.innerHTML = words.map((w, i) => `<span class="w" aria-hidden="true"><span style="--wi:${i}">${esc(w)}</span></span>`).join(" ");
-  }
-}
-
-// --------------------------------------------------------- magnetic + cursor ----
-function magnetic() {
-  if (reduced || !matchMedia("(pointer: fine)").matches) return;
-  for (const b of $$(".hero__actions .btn, .cta__actions .btn, .nav__cta")) {
-    b.addEventListener("pointermove", (e) => {
-      const r = b.getBoundingClientRect();
-      const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
-      b.style.transform = `translate(${x * 0.22}px, ${y * 0.3}px)`;
-    });
-    b.addEventListener("pointerleave", () => { b.style.transform = ""; });
-  }
-}
-
-function cursorLabel() {
-  if (reduced || !matchMedia("(pointer: fine)").matches) return;
-  const c = Object.assign(document.createElement("div"), { className: "cursor" });
-  c.setAttribute("aria-hidden", "true");
-  document.body.append(c);
-  let x = 0, y = 0, cx = 0, cy = 0, on = false;
-  const update = (target) => {
-    const t = target?.closest?.("[data-cursor]");
-    const label = t ? (t.closest(".ev.is-open") && t.classList.contains("ev__row") ? "Close" : t.dataset.cursor) : "";
-    if (label) c.textContent = label;
-    if (!!label !== on) { on = !!label; c.classList.toggle("is-on", on); }
-  };
-  document.addEventListener("pointermove", (e) => { x = e.clientX; y = e.clientY; update(e.target); });
-  // scrolling moves the page under a still pointer, so look again
-  addEventListener("scroll", () => update(document.elementFromPoint(x, y)), { passive: true });
-  document.addEventListener("pointerleave", () => update(null));
-  document.addEventListener("click", () => requestAnimationFrame(() => update(document.elementFromPoint(x, y))));
-  const tick = () => {
-    cx += (x - cx) * 0.2; cy += (y - cy) * 0.2;
-    c.style.transform = `translate3d(${cx + 26}px, ${cy + 22}px, 0)`;
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
-
-// ---------------------------------------------------------- smooth scroll ----
+// ------------------------------------------------------------- page chrome ----
 let lenis = null;
+function scrollToEl(el) {
+  if (!el) return;
+  if (lenis) lenis.scrollTo(el, { offset: -10, duration: 1.4 });
+  else el.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+}
+
 function smoothScroll() {
-  if (reduced || !window.Lenis) return;
-  lenis = new window.Lenis({ lerp: 0.095, smoothWheel: true });
-  const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
-  requestAnimationFrame(raf);
+  if (!reduced && window.Lenis) {
+    lenis = new window.Lenis({ lerp: 0.1, smoothWheel: true });
+    const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
+    requestAnimationFrame(raf);
+  }
   document.addEventListener("click", (e) => {
     const a = e.target.closest('a[href^="#"]');
-    if (!a) return;
+    if (!a || !lenis) return;
     const id = a.getAttribute("href");
     const el = id === "#top" ? 0 : document.querySelector(id);
     if (el === null) return;
     e.preventDefault();
-    lenis.scrollTo(el, { offset: id === "#top" ? 0 : -70, duration: 1.4 });
+    lenis.scrollTo(el, { offset: id === "#top" ? 0 : -10, duration: 1.4 });
     history.replaceState(null, "", id);
   });
 }
@@ -743,19 +888,18 @@ function nav() {
     const y = scrollY;
     n.classList.toggle("is-scrolled", y > 8);
     const open = links.classList.contains("is-open");
-    n.classList.toggle("is-hidden", !open && y > innerHeight * 0.9 && y > last + 4);
+    n.classList.toggle("is-hidden", !open && y > innerHeight * 0.8 && y > last + 4);
     if (y < last - 4) n.classList.remove("is-hidden");
     last = y;
   }, { passive: true });
+  const close = () => { links.classList.remove("is-open"); n.classList.remove("menu-open"); menu.setAttribute("aria-expanded", "false"); };
   menu.addEventListener("click", () => {
     const open = !links.classList.contains("is-open");
     links.classList.toggle("is-open", open);
     n.classList.toggle("menu-open", open);
     menu.setAttribute("aria-expanded", open);
   });
-  links.addEventListener("click", (e) => {
-    if (e.target.closest("a")) { links.classList.remove("is-open"); n.classList.remove("menu-open"); menu.setAttribute("aria-expanded", "false"); }
-  });
+  links.addEventListener("click", (e) => { if (e.target.closest("a")) close(); });
   const map = new Map($$("a", links).map((a) => [a.getAttribute("href").slice(1), a]));
   const io = new IntersectionObserver((ents) => {
     for (const en of ents) {
@@ -765,44 +909,16 @@ function nav() {
     }
   }, { rootMargin: "-45% 0px -50% 0px" });
   for (const id of map.keys()) { const s = document.getElementById(id); if (s) io.observe(s); }
-}
-
-let revealIO;
-function observeReveals(root = document) {
-  revealIO ??= new IntersectionObserver((ents) => {
-    for (const en of ents) if (en.isIntersecting) { en.target.classList.add("is-in"); revealIO.unobserve(en.target); }
-  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
-  for (const el of $$("[data-reveal]:not(.is-in), .sh:not(.is-in)", root)) revealIO.observe(el);
-}
-
-function watchFirstViews() {
-  const io = new IntersectionObserver((ents) => {
-    for (const en of ents) {
-      if (!en.isIntersecting) continue;
-      if (en.target.id === "ledger" && !ledgerSeen) { ledgerSeen = true; countUp(en.target); }
-      if (en.target.id === "chartScroll" && !chartSeen) {
-        chartSeen = true;
-        const svg = $("#chart");
-        requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.remove("is-pre")));
-      }
-      io.unobserve(en.target);
-    }
-  }, { threshold: 0.25 });
-  io.observe($("#ledger"));
-  io.observe($("#chartScroll"));
+  const num = $("[data-decrypt]");
+  if (num && !reduced) { decrypt(num); $(".nav__mark").addEventListener("pointerenter", () => decrypt(num)); }
 }
 
 function mail() {
-  const b = $("#copyMail");
   const toast = Object.assign(document.createElement("div"), { className: "toast", role: "status" });
   document.body.append(toast);
-  b.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText("luckycats20850@gmail.com");
-      toast.textContent = "Address copied";
-    } catch {
-      toast.textContent = "luckycats20850@gmail.com";
-    }
+  $("#copyMail").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText("luckycats20850@gmail.com"); toast.textContent = "Email copied"; }
+    catch { toast.textContent = "luckycats20850@gmail.com"; }
     toast.classList.add("is-on");
     setTimeout(() => toast.classList.remove("is-on"), 1800);
   });
@@ -817,43 +933,40 @@ function footer() {
 // ------------------------------------------------------------------ boot ----
 function boot() {
   if (!D) { console.error("data/team.js did not load"); return; }
-  // Each season-driven section header carries its own copy of the season switch.
-  for (const slot of $$("[data-switch-slot]")) {
-    const sw = Object.assign(document.createElement("div"), { className: "switch" });
-    sw.setAttribute("role", "radiogroup");
-    sw.setAttribute("aria-label", "Season");
-    sw.dataset.switch = "";
-    sw.innerHTML = `<span class="switch__thumb" aria-hidden="true"></span>`;
-    slot.append(sw);
-  }
-
-  splitHeadings();
   buildSwitches();
+  renderOverview();
   renderSeason();
   renderWorlds();
   renderVideos();
   footer();
-  nav();
+  heroIntro();
+  rotator();
   heroMotion();
   flow();
-  themes();
-  marquees();
-  magnetic();
-  cursorLabel();
+  blurText();
+  riseIn($$(".about__card"), { y: 40, gap: 90 });
+  riseIn($$(".cta"), { y: 40 });
+  nav();
   smoothScroll();
+  magnet();
+  clickSpark();
+  scrollVelocity();
+  carousel();
+  drawer();
   mail();
-  observeReveals();
-  watchFirstViews();
+  rail.start();
 
   let rw = innerWidth, rt;
   addEventListener("resize", () => {
     clearTimeout(rt);
     rt = setTimeout(() => {
       syncSwitches();
+      rail.measure();
       if (innerWidth !== rw) { rw = innerWidth; renderChart(D.seasons[season], false); }
-    }, 120);
+    }, 150);
   });
-  document.fonts?.ready.then(syncSwitches);
+  document.fonts?.ready.then(() => { syncSwitches(); rail.measure(); });
+  addEventListener("load", () => rail.measure());
 }
 
 boot();
