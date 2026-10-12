@@ -1,0 +1,43 @@
+{
+  "_readme": "Hand-maintained. scripts/sync.mjs merges this with the API data into data/team.js. Event ids are events.vex.com ids; match keys are round-instance-matchnum.",
+  "seasons": {
+    "197": { "name": "Push Back", "years": "2025–26" },
+    "204": { "name": "Override", "years": "2026–27" }
+  },
+  "shortNames": {
+    "61362": "Capital Beltway Opener",
+    "60506": "AOE Robotics Challenge",
+    "60154": "Smoky Mountain Forge",
+    "60447": "Potomac FrostByte",
+    "61942": "Skirmish in the Stacks",
+    "60666": "Cardinal Classic",
+    "59973": "Blakefield Robotics Challenge V",
+    "60003": "Gateway to the West",
+    "60760": "Meta Broken",
+    "63273": "AOE Robotics Summit",
+    "61466": "Maryland State Championship",
+    "64069": "Buckhall Bash Scrimmage",
+    "64026": "VEX Robotics World Championship",
+    "64870": "Smoky Mountain Forge · MS Signature",
+    "64846": "Smoky Mountain Forge · Blended Signature"
+  },
+  "notes": {
+    "61466": "Every robot in the final came from AOE: 20850V & 20850C against 20850Z & 20850S.",
+    "64026": "Technology Division, St. Louis. Judges Award.",
+    "64069": "Pre-Worlds scrimmage. Scores were not recorded.",
+    "64870": "No matches recorded for 20850C."
+  },
+  "videos": [
+    { "id": "ercsHb5UEiE", "event": 61466, "match": "5-1-1", "title": "State Championship · Final 1", "channel": "Robot Stats" },
+    { "id": "IwdvFFyY558", "event": 61466, "match": "5-1-2", "title": "State Championship · Final 2", "channel": "Robot Stats" },
+    { "id": "aYr7Pab_ftk", "event": 61466, "match": "4-2-1", "title": "State Championship · Semifinal", "channel": "Robot Stats" },
+    { "id": "NP1S9S4NL2w", "event": 61466, "match": "3-3-1", "title": "State Championship · Quarterfinal", "channel": "Robot Stats" },
+    { "id": "0k8TXjbE_ZQ", "event": 60666, "match": "5-1-1", "title": "Cardinal Classic · Final", "channel": "Commandobolt" },
+    { "id": "jTG6sExUpjM", "event": 64846, "match": "6-8-1", "title": "Smoky Mountain Forge · Round of 16", "channel": "Robot Stats" }
+  ],
+  "streams": [
+    { "id": "ITT_UV7Gpsc", "event": 61466, "title": "Maryland State Championship, MS (full stream)", "channel": "Oakdale Robotics" },
+    { "id": "Y4oGV995JXM", "event": 63273, "title": "AOE Robotics Summit 2026 (full stream)", "channel": "Academy of Excellence" },
+    { "id": "hkyA_hKcTuc", "event": 60506, "title": "AOE Robotics Challenge 2025 (full stream)", "channel": "Academy of Excellence" }
+  ]
+}
