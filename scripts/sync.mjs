@@ -165,7 +165,7 @@ function build(C, extras) {
         const tally = ["W", "L", "T"].map((r) => q.filter((m) => m.result === r).length);
         const mismatch = rk && (rk[4] !== tally[0] || rk[5] !== tally[1] || rk[6] !== tally[2]);
         const autoNote = mismatch
-          ? `Official ranking record is ${rk[4]}-${rk[5]}-${rk[6]}; the posted match scores add up to ${tally.join("-")}.`
+          ? `The official rankings have us at ${rk[4]}–${rk[5]}${rk[6] ? `–${rk[6]}` : ""} here, but the posted match scores add up to ${tally[0]}–${tally[1]}${tally[2] ? `–${tally[2]}` : ""}.`
           : null;
 
         return {

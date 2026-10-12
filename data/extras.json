@@ -22,22 +22,22 @@
     "64846": "Smoky Mountain Forge · Blended Signature"
   },
   "notes": {
-    "61466": "Every robot in the final came from AOE: 20850V & 20850C against 20850Z & 20850S.",
-    "64026": "Technology Division, St. Louis. Judges Award.",
-    "64069": "Pre-Worlds scrimmage. Scores were not recorded.",
-    "64870": "No matches recorded for 20850C."
+    "61466": "The whole final was AOE teams: 20850V and us against 20850Z and 20850S.",
+    "64026": "Technology Division in St. Louis. We won the Judges Award here.",
+    "64069": "A practice scrimmage before Worlds. Scores weren't recorded.",
+    "64870": "No matches were recorded for us here."
   },
   "videos": [
-    { "id": "ercsHb5UEiE", "event": 61466, "match": "5-1-1", "title": "State Championship · Final 1", "channel": "Robot Stats" },
-    { "id": "IwdvFFyY558", "event": 61466, "match": "5-1-2", "title": "State Championship · Final 2", "channel": "Robot Stats" },
-    { "id": "aYr7Pab_ftk", "event": 61466, "match": "4-2-1", "title": "State Championship · Semifinal", "channel": "Robot Stats" },
-    { "id": "NP1S9S4NL2w", "event": 61466, "match": "3-3-1", "title": "State Championship · Quarterfinal", "channel": "Robot Stats" },
-    { "id": "0k8TXjbE_ZQ", "event": 60666, "match": "5-1-1", "title": "Cardinal Classic · Final", "channel": "Commandobolt" },
-    { "id": "jTG6sExUpjM", "event": 64846, "match": "6-8-1", "title": "Smoky Mountain Forge · Round of 16", "channel": "Robot Stats" }
+    { "id": "ercsHb5UEiE", "event": 61466, "match": "5-1-1", "title": "Maryland States final, match 1", "channel": "Robot Stats" },
+    { "id": "IwdvFFyY558", "event": 61466, "match": "5-1-2", "title": "Maryland States final, match 2", "channel": "Robot Stats" },
+    { "id": "aYr7Pab_ftk", "event": 61466, "match": "4-2-1", "title": "Maryland States semifinal", "channel": "Robot Stats" },
+    { "id": "NP1S9S4NL2w", "event": 61466, "match": "3-3-1", "title": "Maryland States quarterfinal", "channel": "Robot Stats" },
+    { "id": "0k8TXjbE_ZQ", "event": 60666, "match": "5-1-1", "title": "Cardinal Classic final", "channel": "Commandobolt" },
+    { "id": "jTG6sExUpjM", "event": 64846, "match": "6-8-1", "title": "Smoky Mountain Forge, round of 16", "channel": "Robot Stats" }
   ],
   "streams": [
-    { "id": "ITT_UV7Gpsc", "event": 61466, "title": "Maryland State Championship, MS (full stream)", "channel": "Oakdale Robotics" },
-    { "id": "Y4oGV995JXM", "event": 63273, "title": "AOE Robotics Summit 2026 (full stream)", "channel": "Academy of Excellence" },
-    { "id": "hkyA_hKcTuc", "event": 60506, "title": "AOE Robotics Challenge 2025 (full stream)", "channel": "Academy of Excellence" }
+    { "id": "ITT_UV7Gpsc", "event": 61466, "title": "Maryland States, middle school", "channel": "Oakdale Robotics" },
+    { "id": "Y4oGV995JXM", "event": 63273, "title": "AOE Robotics Summit 2026", "channel": "Academy of Excellence" },
+    { "id": "hkyA_hKcTuc", "event": 60506, "title": "AOE Robotics Challenge 2025", "channel": "Academy of Excellence" }
   ]
 }

@@ -119,10 +119,10 @@ function renderAccolades(S) {
     const latest = played[played.length - 1];
     list.innerHTML = `
       <article class="award award--empty" style="--i:0">
-        <h3 class="award__title">No awards yet.</h3>
+        <h3 class="award__title">No awards yet</h3>
         <p>${latest
-          ? `${esc(S.name)} is ${played.length === 1 ? "one event" : `${played.length} events`} old. Most recently: ${latest.rank.w}–${latest.rank.l}${latest.rank.t ? `–${latest.rank.t}` : ""} in qualifications and ranked ${ordinal(latest.rank.rank)} at ${esc(latest.short)}${latest.skills ? `, with a ${latest.skills.driver}-point driver skills run` : ""}. This space fills in as the season goes.`
-          : `The ${esc(S.name)} season hasn't started for us yet.`}</p>
+          ? `We've only played ${played.length === 1 ? "one event" : `${played.length} events`} in ${esc(S.name)} so far. At ${esc(latest.short)} we went ${latest.rank.w}–${latest.rank.l}${latest.rank.t ? `–${latest.rank.t}` : ""} in quals and finished ${ordinal(latest.rank.rank)}${latest.skills ? `, with a ${latest.skills.driver} in driver skills` : ""}. Check back later in the season.`
+          : `${esc(S.name)} hasn't started for us yet.`}</p>
       </article>`;
     return;
   }
@@ -153,9 +153,9 @@ function renderLedger(S, animate) {
       return `${sig ? `${sig} Signature` : "no Signature events"}, ${played.some((e) => e.level === "World") ? "plus Worlds" : "no Worlds yet"}`;
     })() },
     { v: T.bestRank?.rank ?? 0, ord: true, k: "Best rank", where: ev(T.bestRank?.event) },
-    { v: T.awards, k: "Awards", where: T.awards ? "see above" : "none yet" },
-    { v: T.high ?? 0, k: "High score", where: "alliance total" },
-    { v: T.avg ?? 0, d: 1, k: "Average score", where: `${T.margin >= 0 ? "+" : ""}${T.margin} average margin` },
+    { v: T.awards, k: "Awards", where: T.awards ? "listed above" : "none yet" },
+    { v: T.high ?? 0, k: "High score", where: "best alliance score" },
+    { v: T.avg ?? 0, d: 1, k: "Average score", where: `${T.margin >= 0 ? "won by" : "lost by"} ${Math.abs(T.margin)} on average` },
     { v: T.driver?.score ?? 0, k: "Driver skills", where: ev(T.driver?.event) },
     { v: T.programming?.score ?? 0, k: "Auton skills", where: ev(T.programming?.event) },
   ];
@@ -163,7 +163,7 @@ function renderLedger(S, animate) {
     <div class="ledger__record">
       <p class="ledger__k">${esc(S.name)} record · W–L${T.ties ? "–T" : ""}</p>
       <p class="ledger__big"><span data-count="${T.wins}">${T.wins}</span><span class="dash">–</span><span data-count="${T.losses}">${T.losses}</span>${T.ties ? `<span class="dash">–</span><span data-count="${T.ties}">${T.ties}</span>` : ""}</p>
-      <p class="ledger__sub"><b>${T.qual.w}–${T.qual.l}${T.qual.t ? `–${T.qual.t}` : ""}</b> in qualifications, <b>${T.elim.w}–${T.elim.l}</b> in eliminations.</p>
+      <p class="ledger__sub"><b>${T.qual.w}–${T.qual.l}${T.qual.t ? `–${T.qual.t}` : ""}</b> in quals and <b>${T.elim.w}–${T.elim.l}</b> in elims.</p>
     </div>
     <div class="ledger__cells">
       ${cells.map((c) => `
@@ -341,7 +341,7 @@ function finishChip(e) {
 }
 
 function matchRows(e) {
-  if (!e.matches.length) return `<p class="ev__note">No matches recorded for 20850C at this event.</p>`;
+  if (!e.matches.length) return `<p class="ev__note">No matches were recorded for us at this event.</p>`;
   const rows = e.matches.map((m) => {
     const t = m.time ? m.time.slice(11, 16) : "";
     const score = m.played ? `${m.us}–${m.them}` : "—";
@@ -494,40 +494,17 @@ function renderAoeNotes(S) {
   const vsAoe = ms.filter((m) => m.opponents.some(aoe)).length;
   const sibs = new Set(ms.flatMap((m) => [...m.partners, ...m.opponents]).filter(aoe));
   $("#aoeSiblings").innerHTML = ms.length ? `
-    <dt>${esc(S.name)} on the field</dt>
-    <dd>Of our <b>${ms.length}</b> matches, <b>${withAoe}</b> were alongside another AOE team and <b>${vsAoe}</b> were against one. We crossed paths with <b>${sibs.size}</b> different 20850 teams.</dd>` : `
-    <dt>${esc(S.name)}</dt><dd>No matches played yet this season.</dd>`;
+    <dt>AOE teams in ${esc(S.name)}</dt>
+    <dd>We played <b>${ms.length}</b> matches. In <b>${withAoe}</b> of them our partner was another AOE team, and in <b>${vsAoe}</b> we played against one. That's <b>${sibs.size}</b> different 20850 teams.</dd>` : `
+    <dt>${esc(S.name)}</dt><dd>We haven't played any matches yet this season.</dd>`;
 
   const home = allEvents().filter((e) => /^AOE Robotics/.test(e.short) && e.rank);
   $("#aoeHome").innerHTML = `
     <dt>At AOE's own events</dt>
-    <dd>${home.map((e) => `<b>${esc(e.short)}</b> (${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}): ranked ${ordinal(e.rank.rank)}, ${e.finish === "Qualifications" ? "out after qualifications" : esc((e.finish || "").toLowerCase())}.`).join(" ") || "Results will appear here."}</dd>`;
+    <dd>${home.map((e) => `<b>${esc(e.short)}</b> (${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}): ${ordinal(e.rank.rank)} after quals, ${e.finish === "Qualifications" ? "didn't make elims" : `out in the ${esc(({ "Round of 16": "round of 16", Quarterfinalists: "quarterfinals", Semifinalists: "semifinals" })[e.finish] || (e.finish || "").toLowerCase())}`}.`).join(" ") || "Results will appear here."}</dd>`;
 }
 
 // ------------------------------------------------------------------ hero ----
-const monthYear = (d) => { const [y, m] = ymd(d); return `${MONTHS[m - 1]} ${y}`; };
-
-function renderHeroStats() {
-  const evs = allEvents();
-  const items = [];
-  const world = evs.filter((e) => e.level === "World" && e.awards.length).pop();
-  if (world) items.push(["Latest honor", world.awards[0].title, `${ymd(world.start)[0]} World Championship`]);
-  const champ = evs.filter((e) => e.awards.some((a) => /Champions/i.test(a.raw))).pop();
-  if (champ) items.push(["Tournament win", `Champions, ${champ.short}`, monthYear(champ.start)]);
-  const full = [...D.seasonOrder].reverse().find((s) => D.seasons[s].events.some((e) => e.level === "World"));
-  if (full) {
-    const S = D.seasons[full], T = S.totals;
-    items.push([`${S.name} record`, `${T.wins}–${T.losses}${T.ties ? `–${T.ties}` : ""}`, `${T.awards} awards across ${T.events} events`]);
-  }
-  const cur = D.seasons[D.seasonOrder[D.seasonOrder.length - 1]];
-  if (cur && cur.id !== full) {
-    const last = cur.events.filter((e) => e.rank).pop();
-    items.push([`${cur.name} so far`, last ? `${last.rank.w}–${last.rank.l}, ranked ${ordinal(last.rank.rank)}` : "Season under way", last ? last.short : cur.years]);
-  }
-  $("#heroStats").innerHTML = items.slice(0, 4).map(([k, v, sub]) =>
-    `<div><dt>${esc(k)}</dt><dd>${esc(v)}<small>${esc(sub)}</small></dd></div>`).join("");
-}
-
 // The logo drifts a few pixels against the pointer.
 const pointer = { x: 0.7, y: 0.55, tx: 0.7, ty: 0.55 };
 function heroMotion() {
@@ -834,7 +811,7 @@ function mail() {
 function footer() {
   const t = new Date(D.generated_at);
   const when = isNaN(t) ? "" : ` Last updated ${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}.`;
-  $("#footData").innerHTML = `Results from <a href="https://events.vex.com/teams/V5RC/20850C" target="_blank" rel="noopener">VEX Events</a>, synced nightly.${esc(when)}`;
+  $("#footData").innerHTML = `Match results come from <a href="https://events.vex.com/teams/V5RC/20850C" target="_blank" rel="noopener">VEX Events</a> and update every night.${esc(when)}`;
 }
 
 // ------------------------------------------------------------------ boot ----
@@ -853,7 +830,6 @@ function boot() {
   splitHeadings();
   buildSwitches();
   renderSeason();
-  renderHeroStats();
   renderWorlds();
   renderVideos();
   footer();
