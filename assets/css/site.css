@@ -476,6 +476,119 @@ button { font: inherit; color: inherit; }
 .toast { position: fixed; left: 50%; bottom: 28px; z-index: 80; transform: translate(-50%, 16px); opacity: 0; padding: 12px 18px; border-radius: 12px; background: var(--night); color: #fff; font: 500 14px/1 var(--sans); box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.5); transition: opacity 0.3s, transform 0.45s var(--ease); pointer-events: none; }
 .toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------------------------------------------------------------- color */
+:root { --flame: #ff5533; --sky: #3b6fff; --mint: #17a673; }
+
+/* reading progress */
+.progressbar { position: fixed; inset: 0 0 auto; height: 3px; z-index: 60; pointer-events: none; }
+.progressbar span { display: block; height: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--gold), var(--flame) 55%, var(--sky)); }
+
+/* each section's label is its own color */
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: var(--eb-bg, var(--sunk)); color: var(--eb-ink, var(--ink-2)); }
+.eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+#overview { --eb-bg: #fff0c7; --eb-ink: #8a5a00; }
+#events { --eb-bg: #ffe1d9; --eb-ink: #b6361a; }
+#matches { --eb-bg: #e2eaff; --eb-ink: #2346b0; }
+#videos { --eb-bg: #d9f4e8; --eb-ink: #0d6b49; }
+#about { --eb-bg: #e2eaff; --eb-ink: #2346b0; }
+.worlds .eyebrow { --eb-bg: rgba(255, 176, 0, 0.16); --eb-ink: var(--gold); }
+.cta .eyebrow { --eb-bg: rgba(255, 255, 255, 0.55); --eb-ink: var(--ink); }
+
+/* soft color glows behind a few sections */
+#overview, #videos { position: relative; isolation: isolate; overflow-x: clip; }
+html, body { overflow-x: clip; }
+#overview::before, #videos::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  width: min(900px, 80vw); aspect-ratio: 1.6; border-radius: 50%; filter: blur(90px); opacity: 0.5;
+}
+#overview::before { right: -10%; top: 40px; background: radial-gradient(closest-side, rgba(255, 176, 0, 0.55), rgba(255, 85, 51, 0.25), transparent); }
+#videos::before { left: -15%; top: 60px; background: radial-gradient(closest-side, rgba(59, 111, 255, 0.35), rgba(23, 166, 115, 0.2), transparent); }
+
+/* season cards: a warm or cool glow in the corner */
+.scard::after {
+  content: ""; position: absolute; z-index: -2; right: -18%; top: -45%;
+  width: 60%; aspect-ratio: 1; border-radius: 50%; filter: blur(50px); opacity: 0.55;
+  background: radial-gradient(closest-side, var(--gold), var(--flame) 60%, transparent);
+  transition: transform 1.2s var(--ease), opacity 0.6s;
+}
+.scard + .scard::after { background: radial-gradient(closest-side, var(--sky), #8fb0ff 55%, transparent); opacity: 0.4; }
+.scard:hover::after { transform: scale(1.25) translate(-6%, 6%); opacity: 0.75; }
+.scard__record .dash { color: var(--flame); }
+.scard + .scard .scard__record .dash { color: var(--sky); }
+.scard + .scard .spark-line .area-pos { fill: rgba(59, 111, 255, 0.22); }
+.scard__stats div:nth-child(1) dd { color: #b6361a; }
+.scard__stats div:nth-child(4) dd { color: #8a5a00; }
+
+/* awards: icon color by tier */
+.award--champ .award__icon { background: var(--flame); color: #fff; }
+.award--fin .award__icon { background: var(--sky); color: #fff; font: 700 15px/1 var(--sans); }
+.award--other .award__icon { background: var(--mint); color: #fff; }
+.award--world .award__icon { background: var(--gold); color: var(--ink); }
+
+/* event cards: color by event type */
+.ecard { border-top: 4px solid var(--line-2); }
+.ecard--signature { border-top-color: var(--sky); }
+.ecard--signature .ecard__lvl { background: #e2eaff; color: #2346b0; }
+.ecard--regional { border-top-color: var(--flame); }
+.ecard--regional .ecard__lvl { background: #ffe1d9; color: #b6361a; }
+.ecard--award { background: linear-gradient(170deg, #fff4d6 0%, #fff 55%); border-color: #f3d78f; border-top-color: var(--gold); }
+.ecard--world { border-top-color: var(--gold); background: radial-gradient(120% 70% at 100% 0%, rgba(255, 176, 0, 0.35), transparent 60%), var(--night); }
+.ecard--world .ecard__lvl { background: var(--gold); color: var(--ink); }
+.ecard--world .ecard__rank { color: var(--gold); }
+.ecard__bar { display: block; height: 4px; margin-top: 14px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+.ecard__bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--gold), var(--flame)); }
+.ecard--world .ecard__bar { background: rgba(255, 255, 255, 0.1); }
+.ecard__foot { margin-top: 12px; }
+.spot:nth-child(3n + 2)::before, li:nth-child(3n + 2) > .spot::before { background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 85, 51, 0.14), transparent 60%); }
+li:nth-child(3n) > .spot::before { background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(59, 111, 255, 0.14), transparent 60%); }
+.progress span { background: linear-gradient(90deg, var(--gold), var(--flame) 55%, var(--sky)); }
+
+/* match stats: a colored strip on each */
+.kpis { border-top: 0; }
+.kpi { box-shadow: inset 0 3px 0 var(--k, var(--ink)); }
+.kpi:nth-child(1) { --k: var(--gold); }
+.kpi:nth-child(2) { --k: var(--flame); }
+.kpi:nth-child(3) { --k: var(--mint); }
+.kpi:nth-child(4) { --k: var(--sky); }
+.kpi:nth-child(5) { --k: #ff8a3d; }
+.kpi:nth-child(6) { --k: #7b6cff; }
+.chart__scroll { box-shadow: 0 30px 60px -45px rgba(59, 111, 255, 0.45); }
+
+/* Worlds: a slow glow behind the dark band */
+.worlds { position: relative; isolation: isolate; }
+.worlds::before {
+  content: ""; position: absolute; z-index: -1; right: -20vw; top: -10%;
+  width: 70vw; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 90deg, rgba(255, 176, 0, 0.55), rgba(255, 85, 51, 0.45), rgba(59, 111, 255, 0.35), rgba(255, 176, 0, 0.55));
+  filter: blur(120px); opacity: 0.45;
+  animation: spin 40s linear infinite;
+}
+.strip li:not(.W) { background: rgba(255, 255, 255, 0.04); }
+
+/* videos: win/loss badges */
+.vid__res:not(.W) { background: var(--flame); }
+
+/* scroll velocity rows */
+.velocity { border-color: transparent; background: linear-gradient(90deg, #fff4d6, #ffe1d9 50%, #e2eaff); }
+.velocity__row[data-dir="1"] .velocity__item { -webkit-text-stroke-color: var(--flame); }
+.velocity__row[data-dir="1"] .velocity__dot { background: var(--sky); }
+
+/* about: tinted cards */
+.about__card--club { background: linear-gradient(160deg, #e7eeff, #f6f8ff 60%); border-color: #d3defb; }
+.about__card--name { background: linear-gradient(160deg, #fff1c9, #fffaf0 60%); border-color: #f3dda0; }
+.aims li::before { color: var(--flame); }
+
+/* support: the warm color field fills the card */
+.cta { position: relative; overflow: hidden; isolation: isolate; color: var(--ink); background: #ffd38f; }
+.cta__flow { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; background: radial-gradient(60% 80% at 80% 20%, var(--flame), transparent 70%), radial-gradient(60% 80% at 20% 90%, var(--gold), transparent 70%), #ffd38f; }
+.cta__copy > p:not(.eyebrow) { color: var(--ink-2); }
+.cta::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(90deg, rgba(255, 244, 222, 0.82) 0%, rgba(255, 244, 222, 0.55) 40%, rgba(255, 244, 222, 0) 65%); }
+@media (max-width: 900px) { .cta::before { background: linear-gradient(180deg, rgba(255, 244, 222, 0.8), rgba(255, 244, 222, 0.4) 60%, rgba(255, 244, 222, 0.1)); } }
+.cta__contact { padding: 22px; border-top: 0; border-radius: 18px; background: rgba(255, 255, 255, 0.6); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.8); }
+.cta__mail { color: var(--ink); background-image: linear-gradient(var(--ink), var(--ink)); }
+.cta__hint { color: var(--ink-2); }
+.cta .btn--line { background: rgba(255, 255, 255, 0.7); border-color: rgba(255, 255, 255, 0.9); }
+
 /* ------------------------------------------------------------ responsive */
 @media (max-width: 1080px) {
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }

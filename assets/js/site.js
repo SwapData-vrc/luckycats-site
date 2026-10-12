@@ -211,7 +211,7 @@ function renderOverview() {
     const icon = world ? "★" : champ ? "1st" : fin ? "2nd" : "✦";
     const tier = world ? "World Championship" : e.level === "Regional" ? "State Championship" : e.level === "Signature" ? "Signature Event" : "Tournament";
     return `
-      <li class="award ${world ? "award--world" : champ ? "award--champ" : ""}">
+      <li class="award ${world ? "award--world" : champ ? "award--champ" : fin ? "award--fin" : "award--other"}">
         <span class="award__icon" aria-hidden="true">${icon}</span>
         <p class="award__title">${esc(a.title)}<small>${esc(tier)}</small></p>
         <p class="award__event">${esc(e.short)}${world && e.division ? `, ${esc(e.division)} Division` : ""}</p>
@@ -238,12 +238,13 @@ function renderRail(S, changed) {
     const tag = award ? `<span class="chip chip--award">${esc(award.title)}</span>` : fin ? `<span class="chip">${esc(fin)}</span>` : `<span class="chip">${played(e).length ? "" : "No matches"}</span>`;
     return `
       <li>
-        <button class="ecard spot ${e.awards.length ? "ecard--award" : ""} ${e.level === "World" ? "ecard--world" : ""}" type="button" data-event="${e.id}">
+        <button class="ecard spot ecard--${(e.level || "other").toLowerCase()} ${e.awards.length ? "ecard--award" : ""} ${e.level === "World" ? "ecard--world" : ""}" type="button" data-event="${e.id}">
           <span class="ecard__date"><span>${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}</span>${lvl ? `<span class="ecard__lvl">${lvl}</span>` : ""}</span>
           <span class="ecard__name">${esc(e.short)}</span>
           <span class="ecard__where">${esc(place(e))}</span>
           ${r ? `<span class="ecard__rank">${r.rank}<sup>${suffix(r.rank)}</sup></span><span class="ecard__rankk">Rank${e.division && !/^(Default|Default Division)$/.test(e.division) && e.division !== e.short ? ` · ${esc(e.division)}` : ""}</span>`
               : `<span class="ecard__rank is-none">${played(e).length ? "Unranked" : "No results"}</span><span class="ecard__rankk">${e.note ? "" : ""}</span>`}
+          <span class="ecard__bar" aria-hidden="true"><i style="width:${r && r.w + r.l + r.t ? Math.round((100 * r.w) / (r.w + r.l + r.t)) : 0}%"></i></span>
           <span class="ecard__foot"><span>${r ? `Quals <b>${wl(r)}</b>` : "&nbsp;"}</span>${tag}</span>
         </button>
       </li>`;
@@ -700,14 +701,14 @@ function heroMotion() {
 // A domain-warped noise field in the logo's colors, drawn behind the hero.
 // It runs at a fraction of screen resolution (it's soft anyway) and stops
 // whenever the hero is off screen.
-function flow() {
-  const cv = $("#flow");
+function flow(cv = $("#flow"), ptr = pointer, base = [0.965, 0.961, 0.949]) {
+  if (!cv) return;
   const gl = cv.getContext("webgl", { antialias: false, alpha: false, preserveDrawingBuffer: false });
   if (!gl) return;
   const vs = `attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }`;
   const fs = `
     precision mediump float;
-    uniform vec2 u_res; uniform float u_t; uniform vec2 u_m;
+    uniform vec2 u_res; uniform float u_t; uniform vec2 u_m; uniform vec3 u_base;
     float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float n(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
       return mix(mix(h(i), h(i + vec2(1.0, 0.0)), u.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), u.x), u.y); }
@@ -724,7 +725,7 @@ function flow() {
       float pull = exp(-length(p - m) * 2.2);
       r += 0.22 * pull;
       float f = fbm(p + 3.0 * r);
-      vec3 cream = vec3(0.965, 0.961, 0.949);
+      vec3 cream = u_base;
       vec3 gold  = vec3(1.0, 0.722, 0.11);
       vec3 flame = vec3(1.0, 0.333, 0.2);
       vec3 sky   = vec3(0.42, 0.58, 1.0);
@@ -748,6 +749,7 @@ function flow() {
   gl.enableVertexAttribArray(loc);
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const uRes = gl.getUniformLocation(prog, "u_res"), uT = gl.getUniformLocation(prog, "u_t"), uM = gl.getUniformLocation(prog, "u_m");
+  gl.uniform3f(gl.getUniformLocation(prog, "u_base"), ...base);
 
   const size = () => {
     const scale = Math.min(1, (devicePixelRatio || 1)) * 0.55;
@@ -759,10 +761,10 @@ function flow() {
   let running = false, raf = 0;
   const t0 = performance.now() - 20000; // start mid-flow rather than at a blank first frame
   const draw = (now) => {
-    pointer.x += (pointer.tx - pointer.x) * 0.04;
-    pointer.y += (pointer.ty - pointer.y) * 0.04;
+    ptr.x += (ptr.tx - ptr.x) * 0.04;
+    ptr.y += (ptr.ty - ptr.y) * 0.04;
     gl.uniform1f(uT, (now - t0) / 1000);
-    gl.uniform2f(uM, pointer.x, pointer.y);
+    gl.uniform2f(uM, ptr.x, ptr.y);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     if (running) raf = requestAnimationFrame(draw);
   };
@@ -930,6 +932,33 @@ function footer() {
   $("#footData").innerHTML = `Match results come from <a href="https://events.vex.com/teams/V5RC/20850C" target="_blank" rel="noopener">VEX Events</a> and update every night.${esc(when)}`;
 }
 
+// The support card gets its own, warmer copy of the hero's color field.
+function ctaFlow() {
+  const cv = $("#ctaFlow");
+  if (!cv) return;
+  const card = cv.parentElement;
+  const ptr = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+  card.addEventListener("pointermove", (e) => {
+    const r = card.getBoundingClientRect();
+    ptr.tx = (e.clientX - r.left) / r.width;
+    ptr.ty = 1 - (e.clientY - r.top) / r.height;
+  });
+  flow(cv, ptr, [1.0, 0.84, 0.6]);
+}
+
+// A thin bar across the top fills in as you read down the page.
+function pageProgress() {
+  const bar = $("#pageProgress");
+  if (!bar) return;
+  const set = () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
+  };
+  addEventListener("scroll", set, { passive: true });
+  addEventListener("resize", set);
+  set();
+}
+
 // ------------------------------------------------------------------ boot ----
 function boot() {
   if (!D) { console.error("data/team.js did not load"); return; }
@@ -943,6 +972,8 @@ function boot() {
   rotator();
   heroMotion();
   flow();
+  ctaFlow();
+  pageProgress();
   blurText();
   riseIn($$(".about__card"), { y: 40, gap: 90 });
   riseIn($$(".cta"), { y: 40 });
