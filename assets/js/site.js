@@ -378,7 +378,7 @@ function renderTimeline(S) {
     const pid = `ev-${e.id}`;
     return `
       <li class="ev${e.awards.length ? " ev--award" : ""}${e.level === "World" ? " ev--world" : ""}" data-reveal>
-        <button class="ev__row" type="button" aria-expanded="false" aria-controls="${pid}">
+        <button class="ev__row" type="button" data-cursor="Open" aria-expanded="false" aria-controls="${pid}">
           <span class="ev__date"><b>${esc(fmtRange(e.start, e.end))}</b>${y}</span>
           <span class="ev__node" aria-hidden="true"></span>
           <span class="ev__main">
@@ -436,8 +436,8 @@ function renderWorlds() {
   ];
   $("#worldsFacts").innerHTML = facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("");
   const q = e.matches.filter((m) => m.round === 2 && m.played);
-  $("#worldsStrip").innerHTML = q.map((m) => `
-    <li class="${m.result}" title="${esc(`${m.label}: with ${m.partners.join(", ")} vs ${m.opponents.join(", ")}`)}">
+  $("#worldsStrip").innerHTML = q.map((m, i) => `
+    <li class="${m.result}" style="--i:${i}" title="${esc(`${m.label}: with ${m.partners.join(", ")} vs ${m.opponents.join(", ")}`)}">
       <span class="s-res">${m.result === "W" ? "WIN" : m.result === "L" ? "LOSS" : "TIE"}</span>
       <span class="s-score">${m.us}<span>–${m.them}</span></span>
       <span class="s-q">${esc(m.label)}</span>
@@ -459,7 +459,7 @@ function renderVideos() {
     const res = m && m.played ? `<b>${m.result === "W" ? "Won" : "Lost"} ${m.us}–${m.them}</b>` : "";
     return `
       <figure class="vid" data-reveal style="transition-delay:${(i % 3) * 70}ms">
-        <button class="vid__frame" type="button" data-yt="${esc(v.id)}" aria-label="Play: ${esc(v.title)}">
+        <button class="vid__frame" type="button" data-cursor="Play" data-yt="${esc(v.id)}" aria-label="Play: ${esc(v.title)}">
           <img src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg" alt="" loading="lazy" width="480" height="360" />
           <span class="vid__play">${m ? esc(m.label) : "Play"}</span>
         </button>
@@ -528,24 +528,235 @@ function renderHeroStats() {
     `<div><dt>${esc(k)}</dt><dd>${esc(v)}<small>${esc(sub)}</small></dd></div>`).join("");
 }
 
-// A soft light follows the pointer and the logo drifts a few pixels against it.
+// The logo drifts a few pixels against the pointer.
+const pointer = { x: 0.7, y: 0.55, tx: 0.7, ty: 0.55 };
 function heroMotion() {
-  if (reduced || !matchMedia("(pointer: fine)").matches) return;
-  const hero = $(".hero"), glow = $(".hero__glow"), art = $("#heroArt");
-  let raf = 0, ev = null;
-  const apply = () => {
-    raf = 0;
+  const hero = $(".hero"), art = $("#heroArt");
+  hero.addEventListener("pointermove", (e) => {
     const hr = hero.getBoundingClientRect();
-    glow.style.setProperty("--gx", `${ev.clientX - hr.left}px`);
-    glow.style.setProperty("--gy", `${ev.clientY - hr.top}px`);
+    pointer.tx = (e.clientX - hr.left) / hr.width;
+    pointer.ty = 1 - (e.clientY - hr.top) / hr.height;
+    if (reduced || !matchMedia("(pointer: fine)").matches) return;
     const ar = art.getBoundingClientRect();
-    const dx = (ev.clientX - (ar.left + ar.width / 2)) / innerWidth;
-    const dy = (ev.clientY - (ar.top + ar.height / 2)) / innerHeight;
-    art.style.setProperty("--px", `${(dx * -18).toFixed(1)}px`);
-    art.style.setProperty("--py", `${(dy * -14).toFixed(1)}px`);
-  };
-  hero.addEventListener("pointermove", (e) => { ev = e; raf ||= requestAnimationFrame(apply); });
+    const dx = (e.clientX - (ar.left + ar.width / 2)) / innerWidth;
+    const dy = (e.clientY - (ar.top + ar.height / 2)) / innerHeight;
+    art.style.setProperty("--px", `${(dx * -26).toFixed(1)}px`);
+    art.style.setProperty("--py", `${(dy * -20).toFixed(1)}px`);
+  });
   hero.addEventListener("pointerleave", () => { art.style.setProperty("--px", "0px"); art.style.setProperty("--py", "0px"); });
+}
+
+// ------------------------------------------------------------ color flow ----
+// A domain-warped noise field in the logo's colors, drawn behind the hero.
+// It runs at a fraction of screen resolution (it's soft anyway) and stops
+// whenever the hero is off screen.
+function flow() {
+  const cv = $("#flow");
+  const gl = cv.getContext("webgl", { antialias: false, alpha: false, preserveDrawingBuffer: false });
+  if (!gl) return;
+  const vs = `attribute vec2 a; void main(){ gl_Position = vec4(a, 0.0, 1.0); }`;
+  const fs = `
+    precision mediump float;
+    uniform vec2 u_res; uniform float u_t; uniform vec2 u_m;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(h(i), h(i + vec2(1.0, 0.0)), u.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), u.x), u.y); }
+    float fbm(vec2 p){ float v = 0.0, a = 0.5; mat2 r = mat2(1.6, 1.2, -1.2, 1.6);
+      for (int i = 0; i < 5; i++) { v += a * n(p); p = r * p; a *= 0.5; } return v; }
+    void main(){
+      vec2 uv = gl_FragCoord.xy / u_res;
+      float asp = u_res.x / u_res.y;
+      vec2 p = uv * vec2(asp, 1.0) * 1.7;
+      vec2 m = u_m * vec2(asp, 1.0) * 1.7;
+      float t = u_t * 0.045;
+      vec2 q = vec2(fbm(p + t), fbm(p + vec2(5.2, 1.3) - t));
+      vec2 r = vec2(fbm(p + 3.0 * q + vec2(1.7, 9.2) + 1.4 * t), fbm(p + 3.0 * q + vec2(8.3, 2.8) - t));
+      float pull = exp(-length(p - m) * 2.2);
+      r += 0.22 * pull;
+      float f = fbm(p + 3.0 * r);
+      vec3 cream = vec3(0.984, 0.965, 0.925);
+      vec3 gold  = vec3(1.0, 0.722, 0.11);
+      vec3 flame = vec3(1.0, 0.333, 0.2);
+      vec3 sky   = vec3(0.42, 0.58, 1.0);
+      vec3 col = mix(cream, gold, smoothstep(0.28, 0.62, f));
+      col = mix(col, flame, smoothstep(0.5, 0.85, r.x));
+      col = mix(col, sky, smoothstep(0.56, 0.9, q.y) * 0.6);
+      col = mix(col, cream, smoothstep(0.8, 1.0, f) * 0.35);
+      col += (h(gl_FragCoord.xy + fract(u_t)) - 0.5) * 0.03;
+      gl_FragColor = vec4(col, 1.0);
+    }`;
+  const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return gl.getShaderParameter(o, gl.COMPILE_STATUS) ? o : null; };
+  const v = sh(gl.VERTEX_SHADER, vs), f = sh(gl.FRAGMENT_SHADER, fs);
+  if (!v || !f) return;
+  const prog = gl.createProgram();
+  gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, "a");
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  const uRes = gl.getUniformLocation(prog, "u_res"), uT = gl.getUniformLocation(prog, "u_t"), uM = gl.getUniformLocation(prog, "u_m");
+
+  const size = () => {
+    const scale = Math.min(1, (devicePixelRatio || 1)) * 0.55;
+    cv.width = Math.max(2, Math.round(cv.clientWidth * scale));
+    cv.height = Math.max(2, Math.round(cv.clientHeight * scale));
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform2f(uRes, cv.width, cv.height);
+  };
+  let running = false, raf = 0;
+  const t0 = performance.now() - 20000; // start mid-flow rather than at a blank first frame
+  const draw = (now) => {
+    pointer.x += (pointer.tx - pointer.x) * 0.04;
+    pointer.y += (pointer.ty - pointer.y) * 0.04;
+    gl.uniform1f(uT, (now - t0) / 1000);
+    gl.uniform2f(uM, pointer.x, pointer.y);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (running) raf = requestAnimationFrame(draw);
+  };
+  const start = () => { if (!running && !reduced) { running = true; raf = requestAnimationFrame(draw); } };
+  const stop = () => { running = false; cancelAnimationFrame(raf); };
+  size();
+  draw(performance.now());
+  cv.style.background = "none";
+  addEventListener("resize", () => { size(); if (!running) draw(performance.now()); });
+  new IntersectionObserver(([en]) => (en.isIntersecting ? start() : stop())).observe(cv);
+  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
+}
+
+// ---------------------------------------------------------------- themes ----
+// The section crossing the middle of the screen sets the page's colors.
+const THEME_COLOR = { cream: "#FBF6EC", gold: "#FFC23A", night: "#121010", sky: "#D3E2FF", flame: "#FF5533" };
+function themes() {
+  const meta = $('meta[name="theme-color"]');
+  const io = new IntersectionObserver((ents) => {
+    for (const en of ents) {
+      if (!en.isIntersecting) continue;
+      const t = en.target.dataset.theme;
+      if (document.body.dataset.theme !== t) {
+        document.body.dataset.theme = t;
+        meta?.setAttribute("content", THEME_COLOR[t] || THEME_COLOR.cream);
+      }
+    }
+  }, { rootMargin: "-50% 0px -50% 0px" });
+  for (const el of $$("main [data-theme], footer[data-theme]")) io.observe(el);
+}
+
+// --------------------------------------------------------------- marquees ----
+// Two endless tracks: results under the hero, the wordmark in the footer.
+// They drift on their own and pick up speed (and direction) from scrolling.
+let scrollVel = 0;
+function marquees() {
+  const evs = allEvents();
+  const items = [];
+  for (const e of [...evs].reverse()) for (const a of e.awards) items.push(`<b>${esc(a.title)}</b> ${esc(e.short)}`);
+  for (const sid of [...D.seasonOrder].reverse()) {
+    const S = D.seasons[sid], T = S.totals;
+    if (!T.matches) continue;
+    items.push(`<b>${T.wins}–${T.losses}</b> ${esc(S.name)} record`);
+    if (T.driver) items.push(`<b>${T.driver.score}</b> ${esc(S.name)} driver skills`);
+  }
+  const world = evs.find((e) => e.level === "World");
+  if (world?.rank) items.push(`<b>${ordinal(world.rank.rank)}</b> ${esc(world.division)} Division, Worlds`);
+  const line = items.map((t) => `<span class="marquee__item"><i class="marquee__star" aria-hidden="true"></i>${t}</span>`).join("");
+  $("#marquee").innerHTML = line + line;
+
+  const mark = `<span class="wordmark__item">Lucky Cats <img src="assets/img/logo.webp" alt="" /> <span class="o">20850C</span> <img src="assets/img/logo.webp" alt="" /></span>`;
+  $("#wordmark").innerHTML = mark.repeat(4);
+
+  const tracks = [
+    { el: $("#marquee"), x: 0, speed: 0.6, dir: -1 },
+    { el: $("#wordmark"), x: 0, speed: 0.45, dir: 1 },
+  ];
+  let lastY = scrollY;
+  addEventListener("scroll", () => { scrollVel += scrollY - lastY; lastY = scrollY; }, { passive: true });
+  if (reduced) return;
+  let prev = performance.now();
+  const tick = (now) => {
+    const dt = Math.min(48, now - prev) / 16.67;
+    prev = now;
+    scrollVel *= 0.9;
+    const boost = Math.min(8, Math.abs(scrollVel) * 0.12);
+    const sign = scrollVel < -0.5 ? -1 : 1;
+    for (const t of tracks) {
+      const half = t.el.scrollWidth / 2;
+      t.x += t.dir * sign * (t.speed + boost) * dt;
+      if (t.x <= -half) t.x += half;
+      if (t.x > 0) t.x -= half;
+      t.el.style.transform = `translate3d(${t.x}px,0,0)`;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// ----------------------------------------------------------- split words ----
+function splitHeadings() {
+  for (const h of $$(".sh__main h2, .cta__title")) {
+    const words = h.textContent.trim().split(/\s+/);
+    h.setAttribute("aria-label", h.textContent.trim());
+    h.classList.add("words");
+    h.innerHTML = words.map((w, i) => `<span class="w" aria-hidden="true"><span style="--wi:${i}">${esc(w)}</span></span>`).join(" ");
+  }
+}
+
+// --------------------------------------------------------- magnetic + cursor ----
+function magnetic() {
+  if (reduced || !matchMedia("(pointer: fine)").matches) return;
+  for (const b of $$(".hero__actions .btn, .cta__actions .btn, .nav__cta")) {
+    b.addEventListener("pointermove", (e) => {
+      const r = b.getBoundingClientRect();
+      const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+      b.style.transform = `translate(${x * 0.22}px, ${y * 0.3}px)`;
+    });
+    b.addEventListener("pointerleave", () => { b.style.transform = ""; });
+  }
+}
+
+function cursorLabel() {
+  if (reduced || !matchMedia("(pointer: fine)").matches) return;
+  const c = Object.assign(document.createElement("div"), { className: "cursor" });
+  c.setAttribute("aria-hidden", "true");
+  document.body.append(c);
+  let x = 0, y = 0, cx = 0, cy = 0, on = false;
+  const update = (target) => {
+    const t = target?.closest?.("[data-cursor]");
+    const label = t ? (t.closest(".ev.is-open") && t.classList.contains("ev__row") ? "Close" : t.dataset.cursor) : "";
+    if (label) c.textContent = label;
+    if (!!label !== on) { on = !!label; c.classList.toggle("is-on", on); }
+  };
+  document.addEventListener("pointermove", (e) => { x = e.clientX; y = e.clientY; update(e.target); });
+  // scrolling moves the page under a still pointer, so look again
+  addEventListener("scroll", () => update(document.elementFromPoint(x, y)), { passive: true });
+  document.addEventListener("pointerleave", () => update(null));
+  document.addEventListener("click", () => requestAnimationFrame(() => update(document.elementFromPoint(x, y))));
+  const tick = () => {
+    cx += (x - cx) * 0.2; cy += (y - cy) * 0.2;
+    c.style.transform = `translate3d(${cx + 26}px, ${cy + 22}px, 0)`;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// ---------------------------------------------------------- smooth scroll ----
+let lenis = null;
+function smoothScroll() {
+  if (reduced || !window.Lenis) return;
+  lenis = new window.Lenis({ lerp: 0.095, smoothWheel: true });
+  const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
+  requestAnimationFrame(raf);
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const id = a.getAttribute("href");
+    const el = id === "#top" ? 0 : document.querySelector(id);
+    if (el === null) return;
+    e.preventDefault();
+    lenis.scrollTo(el, { offset: id === "#top" ? 0 : -70, duration: 1.4 });
+    history.replaceState(null, "", id);
+  });
 }
 
 function nav() {
@@ -639,6 +850,7 @@ function boot() {
     slot.append(sw);
   }
 
+  splitHeadings();
   buildSwitches();
   renderSeason();
   renderHeroStats();
@@ -647,6 +859,12 @@ function boot() {
   footer();
   nav();
   heroMotion();
+  flow();
+  themes();
+  marquees();
+  magnetic();
+  cursorLabel();
+  smoothScroll();
   mail();
   observeReveals();
   watchFirstViews();

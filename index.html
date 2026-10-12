@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lucky Cats · VEX V5RC 20850C</title>
   <meta name="description" content="Lucky Cats, VEX V5 Robotics Competition team 20850C from AOE Robotics Club in Rockville, Maryland. Judges Award at the 2026 VEX Robotics World Championship." />
-  <meta name="theme-color" content="#F6F5F1" />
+  <meta name="theme-color" content="#FBF6EC" />
   <meta name="color-scheme" content="light" />
   <meta property="og:title" content="Lucky Cats · VEX 20850C" />
   <meta property="og:description" content="Middle school VEX V5RC team from Rockville, Maryland. Judges Award, 2026 World Championship." />
@@ -20,9 +20,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" />
   <link rel="preload" as="image" href="assets/img/logo.webp" />
-  <link rel="stylesheet" href="assets/css/site.css?v=2" />
+  <link rel="stylesheet" href="assets/css/site.css?v=3" />
 </head>
-<body>
+<body data-theme="cream">
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="nav" id="nav">
@@ -49,8 +49,9 @@
 
   <main id="main">
     <!-- ============================================================ HERO -->
-    <section class="hero" id="top">
-      <div class="hero__glow" aria-hidden="true"></div>
+    <section class="hero" id="top" data-theme="cream">
+      <canvas class="hero__flow" id="flow" aria-hidden="true"></canvas>
+      <div class="hero__fade" aria-hidden="true"></div>
       <div class="wrap">
         <div class="hero__meta">
           <span>VEX V5 Robotics Competition</span>
@@ -84,8 +85,13 @@
       </div>
     </section>
 
+    <!-- ========================================================= MARQUEE -->
+    <div class="marquee" aria-label="Recent results">
+      <div class="marquee__track" id="marquee"></div>
+    </div>
+
     <!-- ======================================================= ACCOLADES -->
-    <section class="section" id="accolades">
+    <section class="section" id="accolades" data-theme="gold">
       <div class="wrap">
         <header class="sh" data-reveal>
           <p class="sh__idx"><span>01</span>Accolades</p>
@@ -100,7 +106,7 @@
     </section>
 
     <!-- ========================================================== SEASON -->
-    <section class="section" id="season">
+    <section class="section" id="season" data-theme="cream">
       <div class="wrap">
         <header class="sh" data-reveal>
           <p class="sh__idx"><span>02</span>Season</p>
@@ -134,7 +140,7 @@
     </section>
 
     <!-- ========================================================== EVENTS -->
-    <section class="section" id="events">
+    <section class="section" id="events" data-theme="cream">
       <div class="wrap">
         <header class="sh" data-reveal>
           <p class="sh__idx"><span>03</span>Events</p>
@@ -149,7 +155,7 @@
     </section>
 
     <!-- ========================================================== WORLDS -->
-    <section class="worlds" id="worlds">
+    <section class="section worlds" id="worlds" data-theme="night">
       <div class="wrap">
         <header class="sh sh--dark" data-reveal>
           <p class="sh__idx"><span>04</span>Worlds</p>
@@ -181,7 +187,7 @@
     </section>
 
     <!-- ========================================================== VIDEOS -->
-    <section class="section" id="videos">
+    <section class="section" id="videos" data-theme="cream">
       <div class="wrap">
         <header class="sh" data-reveal>
           <p class="sh__idx"><span>05</span>Videos</p>
@@ -199,7 +205,7 @@
     </section>
 
     <!-- ============================================================= AOE -->
-    <section class="section" id="aoe">
+    <section class="section" id="aoe" data-theme="sky">
       <div class="wrap">
         <header class="sh" data-reveal>
           <p class="sh__idx"><span>06</span>AOE Robotics</p>
@@ -242,7 +248,7 @@
     </section>
 
     <!-- =========================================================== ABOUT -->
-    <section class="section" id="about">
+    <section class="section" id="about" data-theme="cream">
       <div class="wrap">
         <header class="sh" data-reveal>
           <p class="sh__idx"><span>07</span>About</p>
@@ -306,7 +312,7 @@
     </section>
 
     <!-- ========================================================= SUPPORT -->
-    <section class="section section--last" id="support">
+    <section class="section section--last" id="support" data-theme="flame">
       <div class="wrap">
         <div class="cta" data-reveal>
           <div class="cta__copy">
@@ -332,7 +338,8 @@
     </section>
   </main>
 
-  <footer class="foot">
+  <footer class="foot" data-theme="cream">
+    <div class="wordmark" aria-hidden="true"><div class="wordmark__track" id="wordmark"></div></div>
     <div class="wrap foot__in">
       <p class="foot__brand"><img src="assets/img/logo.webp" alt="" width="20" height="26" /> Lucky Cats · 20850C</p>
       <p class="foot__data" id="footData">Results from VEX Events, synced nightly.</p>
@@ -340,7 +347,8 @@
     </div>
   </footer>
 
-  <script src="data/team.js?v=2"></script>
-  <script src="assets/js/site.js?v=2" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js" integrity="sha384-jqpi9VmOdhyLoLURgjCn7EpnG9BbnHW57ibIZoeaIU+erWDH3k8fQQg0xH2ySjnw" crossorigin="anonymous"></script>
+  <script src="data/team.js?v=3"></script>
+  <script src="assets/js/site.js?v=3" type="module"></script>
 </body>
 </html>
