@@ -132,7 +132,6 @@ function renderAccolades(S) {
     const quals = a.qualifies.length ? `<span>Qualified for ${esc(a.qualifies.join(", ").replace("Event Region Championship", "State"))}</span>` : "";
     return `
       <article class="award ${t.cls}" style="--i:${i}">
-        ${e.level === "World" ? `<span class="award__seal" lang="ja" aria-hidden="true">吉</span>` : ""}
         <span class="award__tier">${esc(t.tier)}</span>
         <h3 class="award__title">${esc(a.title)}</h3>
         <p class="award__event">${esc(e.short)}${e.level === "World" && e.division ? ` · ${esc(e.division)} Division` : ""}</p>
@@ -495,155 +494,58 @@ function renderAoeNotes(S) {
   const vsAoe = ms.filter((m) => m.opponents.some(aoe)).length;
   const sibs = new Set(ms.flatMap((m) => [...m.partners, ...m.opponents]).filter(aoe));
   $("#aoeSiblings").innerHTML = ms.length ? `
-    <p class="note__k">${esc(S.name)}: the club on the field</p>
-    <p>Of our <b>${ms.length}</b> matches, <b>${withAoe}</b> were alongside another AOE team and <b>${vsAoe}</b> were against one. We crossed paths with <b>${sibs.size}</b> different 20850 teams.</p>` : `
-    <p class="note__k">${esc(S.name)}</p><p>No matches played yet this season.</p>`;
+    <dt>${esc(S.name)} on the field</dt>
+    <dd>Of our <b>${ms.length}</b> matches, <b>${withAoe}</b> were alongside another AOE team and <b>${vsAoe}</b> were against one. We crossed paths with <b>${sibs.size}</b> different 20850 teams.</dd>` : `
+    <dt>${esc(S.name)}</dt><dd>No matches played yet this season.</dd>`;
 
   const home = allEvents().filter((e) => /^AOE Robotics/.test(e.short) && e.rank);
   $("#aoeHome").innerHTML = `
-    <p class="note__k">At AOE's own events</p>
-    <p>${home.map((e) => `<b>${esc(e.short)}</b> (${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}): ranked ${ordinal(e.rank.rank)}, ${e.finish === "Qualifications" ? "out after qualifications" : esc((e.finish || "").toLowerCase())}.`).join(" ") || "Results will appear here."}</p>`;
+    <dt>At AOE's own events</dt>
+    <dd>${home.map((e) => `<b>${esc(e.short)}</b> (${esc(fmtRange(e.start, e.end))}, ${ymd(e.start)[0]}): ranked ${ordinal(e.rank.rank)}, ${e.finish === "Qualifications" ? "out after qualifications" : esc((e.finish || "").toLowerCase())}.`).join(" ") || "Results will appear here."}</dd>`;
 }
 
-// ----------------------------------------------------------------- coins ----
-// A sparse field of koban and dots behind the hero. They drift, lean away from
-// the pointer, and spin when tapped.
-function coins() {
-  const cv = $("#coins");
-  const hero = cv.parentElement;
-  const ctx = cv.getContext("2d");
-  let W = 0, H = 0, dpr = 1, parts = [], running = false, raf = 0;
-  const mouse = { x: -9999, y: -9999 };
-  const DOTS = ["#c8452a", "#e9a91c", "#221a14", "#3f79b5", "#e9a91c", "#c8452a", "#7a6e62"];
+// ------------------------------------------------------------------ hero ----
+const monthYear = (d) => { const [y, m] = ymd(d); return `${MONTHS[m - 1]} ${y}`; };
 
-  function seed() {
-    const r = hero.getBoundingClientRect();
-    dpr = Math.min(2, devicePixelRatio || 1);
-    W = r.width; H = r.height;
-    cv.width = W * dpr; cv.height = H * dpr;
-    const copy = $(".hero__copy").getBoundingClientRect();
-    const cx0 = copy.left - r.left, cy0 = copy.top - r.top, cx1 = cx0 + copy.width, cy1 = cy0 + copy.height;
-    const n = Math.min(90, Math.round((W * H) / 17000));
-    parts = [];
-    let guard = 0;
-    while (parts.length < n && guard++ < n * 20) {
-      const x = Math.random() * W, y = Math.random() * H;
-      if (x > cx0 - 20 && x < cx1 + 20 && y > cy0 - 20 && y < cy1 + 20 && Math.random() < 0.96) continue;
-      const koban = Math.random() < 0.28;
-      const z = 0.3 + Math.random() * 0.9;
-      parts.push({
-        hx: x, hy: y, x, y, vx: 0, vy: 0, z,
-        r: koban ? 5 + z * 7 : 1.4 + z * 2.6,
-        koban,
-        c: DOTS[(Math.random() * DOTS.length) | 0],
-        ph: Math.random() * Math.PI * 2,
-        sp: 0.2 + Math.random() * 0.5,
-        spin: Math.random() * Math.PI * 2,
-        vs: 0,
-      });
-    }
-    parts.sort((a, b) => a.z - b.z);
+function renderHeroStats() {
+  const evs = allEvents();
+  const items = [];
+  const world = evs.filter((e) => e.level === "World" && e.awards.length).pop();
+  if (world) items.push(["Latest honor", world.awards[0].title, `${ymd(world.start)[0]} World Championship`]);
+  const champ = evs.filter((e) => e.awards.some((a) => /Champions/i.test(a.raw))).pop();
+  if (champ) items.push(["Tournament win", `Champions, ${champ.short}`, monthYear(champ.start)]);
+  const full = [...D.seasonOrder].reverse().find((s) => D.seasons[s].events.some((e) => e.level === "World"));
+  if (full) {
+    const S = D.seasons[full], T = S.totals;
+    items.push([`${S.name} record`, `${T.wins}–${T.losses}${T.ties ? `–${T.ties}` : ""}`, `${T.awards} awards across ${T.events} events`]);
   }
-
-  function drawKoban(p, t) {
-    const sx = Math.cos(p.spin + t * 0.0004 * p.sp);
-    const w = p.r * 0.72 * Math.max(0.12, Math.abs(sx)), h = p.r;
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(Math.sin(p.ph) * 0.4);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, w, h, 0, 0, Math.PI * 2);
-    ctx.fillStyle = sx > 0 ? "#e9a91c" : "#d39410";
-    ctx.fill();
-    ctx.lineWidth = 1.2;
-    ctx.strokeStyle = "#221a14";
-    ctx.stroke();
-    if (Math.abs(sx) > 0.45) {
-      ctx.beginPath();
-      ctx.ellipse(0, 0, w * 0.68, h * 0.74, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(138,93,0,.55)";
-      ctx.lineWidth = 0.8;
-      ctx.stroke();
-      ctx.beginPath();
-      for (let k = -2; k <= 2; k++) { ctx.moveTo(-w * 0.45, k * h * 0.2); ctx.lineTo(w * 0.45, k * h * 0.2); }
-      ctx.stroke();
-    }
-    ctx.restore();
+  const cur = D.seasons[D.seasonOrder[D.seasonOrder.length - 1]];
+  if (cur && cur.id !== full) {
+    const last = cur.events.filter((e) => e.rank).pop();
+    items.push([`${cur.name} so far`, last ? `${last.rank.w}–${last.rank.l}, ranked ${ordinal(last.rank.rank)}` : "Season under way", last ? last.short : cur.years]);
   }
-
-  function frame(t) {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    const scrollY = window.scrollY;
-    for (const p of parts) {
-      const tx = p.hx + Math.sin(t * 0.00025 * p.sp + p.ph) * 10 * p.z;
-      const ty = p.hy + Math.cos(t * 0.0002 * p.sp + p.ph) * 8 * p.z - scrollY * (p.z - 0.3) * 0.35;
-      const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy, R = 130;
-      if (d2 < R * R) {
-        const d = Math.sqrt(d2) || 1, f = (1 - d / R) * 1.4 * p.z;
-        p.vx += (dx / d) * f; p.vy += (dy / d) * f;
-      }
-      p.vx += (tx - p.x) * 0.012; p.vy += (ty - p.y) * 0.012;
-      p.vx *= 0.9; p.vy *= 0.9;
-      p.x += p.vx; p.y += p.vy;
-      p.spin += p.vs; p.vs *= 0.97;
-      if (p.y < -30 || p.y > H + 30) continue;
-      if (p.koban) drawKoban(p, t);
-      else {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.c;
-        ctx.globalAlpha = 0.45 + p.z * 0.45;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-    if (running) raf = requestAnimationFrame(frame);
-  }
-
-  const start = () => { if (!running && !reduced) { running = true; raf = requestAnimationFrame(frame); } };
-  const stop = () => { running = false; cancelAnimationFrame(raf); };
-
-  hero.addEventListener("pointermove", (e) => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; });
-  hero.addEventListener("pointerleave", () => { mouse.x = mouse.y = -9999; });
-  hero.addEventListener("pointerdown", (e) => {
-    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-    for (const p of parts) {
-      const d = Math.hypot(p.x - x, p.y - y);
-      if (d < 80) { p.vs += (p.koban ? 0.5 : 0) * (1 - d / 80); p.vy -= (1 - d / 80) * 6; }
-    }
-  });
-
-  let rt;
-  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { seed(); if (reduced) frame(0); }, 150); });
-  new IntersectionObserver(([en]) => (en.isIntersecting ? start() : stop())).observe(hero);
-  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
-  seed();
-  if (reduced) frame(0); else start();
+  $("#heroStats").innerHTML = items.slice(0, 4).map(([k, v, sub]) =>
+    `<div><dt>${esc(k)}</dt><dd>${esc(v)}<small>${esc(sub)}</small></dd></div>`).join("");
 }
 
-// --------------------------------------------------------- small motions ----
-function polaroid() {
-  const p = $("#polaroid");
-  const hero = $(".hero");
-  if (!reduced && matchMedia("(pointer: fine)").matches) {
-    hero.addEventListener("pointermove", (e) => {
-      const r = p.getBoundingClientRect();
-      const x = (e.clientX - (r.left + r.width / 2)) / innerWidth;
-      const y = (e.clientY - (r.top + r.height / 2)) / innerHeight;
-      p.style.setProperty("--ry", `${(x * 10).toFixed(2)}deg`);
-      p.style.setProperty("--rx", `${(-y * 8).toFixed(2)}deg`);
-    });
-    hero.addEventListener("pointerleave", () => { p.style.setProperty("--rx", "0deg"); p.style.setProperty("--ry", "0deg"); });
-  }
-  const beckon = () => { p.classList.remove("is-beckoning"); void p.offsetWidth; p.classList.add("is-beckoning"); };
-  p.addEventListener("click", beckon);
-  setTimeout(beckon, 1600);
-}
-
-function koban() {
-  const k = $("#koban");
-  k.addEventListener("click", () => { k.classList.remove("is-flipping"); void k.offsetWidth; k.classList.add("is-flipping"); });
+// A soft light follows the pointer and the logo drifts a few pixels against it.
+function heroMotion() {
+  if (reduced || !matchMedia("(pointer: fine)").matches) return;
+  const hero = $(".hero"), glow = $(".hero__glow"), art = $("#heroArt");
+  let raf = 0, ev = null;
+  const apply = () => {
+    raf = 0;
+    const hr = hero.getBoundingClientRect();
+    glow.style.setProperty("--gx", `${ev.clientX - hr.left}px`);
+    glow.style.setProperty("--gy", `${ev.clientY - hr.top}px`);
+    const ar = art.getBoundingClientRect();
+    const dx = (ev.clientX - (ar.left + ar.width / 2)) / innerWidth;
+    const dy = (ev.clientY - (ar.top + ar.height / 2)) / innerHeight;
+    art.style.setProperty("--px", `${(dx * -18).toFixed(1)}px`);
+    art.style.setProperty("--py", `${(dy * -14).toFixed(1)}px`);
+  };
+  hero.addEventListener("pointermove", (e) => { ev = e; raf ||= requestAnimationFrame(apply); });
+  hero.addEventListener("pointerleave", () => { art.style.setProperty("--px", "0px"); art.style.setProperty("--py", "0px"); });
 }
 
 function nav() {
@@ -660,10 +562,11 @@ function nav() {
   menu.addEventListener("click", () => {
     const open = !links.classList.contains("is-open");
     links.classList.toggle("is-open", open);
+    n.classList.toggle("menu-open", open);
     menu.setAttribute("aria-expanded", open);
   });
   links.addEventListener("click", (e) => {
-    if (e.target.closest("a")) { links.classList.remove("is-open"); menu.setAttribute("aria-expanded", "false"); }
+    if (e.target.closest("a")) { links.classList.remove("is-open"); n.classList.remove("menu-open"); menu.setAttribute("aria-expanded", "false"); }
   });
   const map = new Map($$("a", links).map((a) => [a.getAttribute("href").slice(1), a]));
   const io = new IntersectionObserver((ents) => {
@@ -681,7 +584,7 @@ function observeReveals(root = document) {
   revealIO ??= new IntersectionObserver((ents) => {
     for (const en of ents) if (en.isIntersecting) { en.target.classList.add("is-in"); revealIO.unobserve(en.target); }
   }, { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
-  for (const el of $$("[data-reveal]:not(.is-in), .section__head:not(.is-in)", root)) revealIO.observe(el);
+  for (const el of $$("[data-reveal]:not(.is-in), .sh:not(.is-in)", root)) revealIO.observe(el);
 }
 
 function watchFirstViews() {
@@ -726,24 +629,24 @@ function footer() {
 // ------------------------------------------------------------------ boot ----
 function boot() {
   if (!D) { console.error("data/team.js did not load"); return; }
-  // The accolades header gets its own copy of the season switch.
-  const head = $("#accolades .section__head");
-  const sw = Object.assign(document.createElement("div"), { className: "switch switch--inline" });
-  sw.setAttribute("role", "radiogroup");
-  sw.setAttribute("aria-label", "Season");
-  sw.dataset.switch = "";
-  sw.innerHTML = `<span class="switch__thumb" aria-hidden="true"></span>`;
-  head.append(sw);
+  // Each season-driven section header carries its own copy of the season switch.
+  for (const slot of $$("[data-switch-slot]")) {
+    const sw = Object.assign(document.createElement("div"), { className: "switch" });
+    sw.setAttribute("role", "radiogroup");
+    sw.setAttribute("aria-label", "Season");
+    sw.dataset.switch = "";
+    sw.innerHTML = `<span class="switch__thumb" aria-hidden="true"></span>`;
+    slot.append(sw);
+  }
 
   buildSwitches();
   renderSeason();
+  renderHeroStats();
   renderWorlds();
   renderVideos();
   footer();
   nav();
-  coins();
-  polaroid();
-  koban();
+  heroMotion();
   mail();
   observeReveals();
   watchFirstViews();

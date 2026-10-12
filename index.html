@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lucky Cats · VEX V5RC 20850C</title>
   <meta name="description" content="Lucky Cats, VEX V5 Robotics Competition team 20850C from AOE Robotics Club in Rockville, Maryland. Judges Award at the 2026 VEX Robotics World Championship." />
-  <meta name="theme-color" content="#F3EEE4" />
+  <meta name="theme-color" content="#F6F5F1" />
   <meta name="color-scheme" content="light" />
   <meta property="og:title" content="Lucky Cats · VEX 20850C" />
   <meta property="og:description" content="Middle school VEX V5RC team from Rockville, Maryland. Judges Award, 2026 World Championship." />
@@ -18,155 +18,163 @@
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Caveat:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@700&text=%E6%8B%9B%E3%81%8D%E7%8C%AB%E5%A4%A7%E5%90%89&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" />
   <link rel="preload" as="image" href="assets/img/logo.webp" />
-  <link rel="stylesheet" href="assets/css/site.css" />
+  <link rel="stylesheet" href="assets/css/site.css?v=2" />
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="nav" id="nav">
-    <a class="nav__mark" href="#top" aria-label="Lucky Cats, back to top">
-      <img src="assets/img/logo.webp" alt="" width="28" height="36" />
-      <span>20850C</span>
-    </a>
-    <nav class="nav__links" id="navLinks" aria-label="Sections">
-      <a href="#accolades">Accolades</a>
-      <a href="#season">Season</a>
-      <a href="#events">Events</a>
-      <a href="#worlds">Worlds</a>
-      <a href="#videos">Videos</a>
-      <a href="#aoe">AOE</a>
-      <a href="#about">About</a>
-      <a href="#support" class="nav__cta">Support</a>
-    </nav>
-    <div class="switch" role="radiogroup" aria-label="Season" data-switch>
-      <span class="switch__thumb" aria-hidden="true"></span>
+    <div class="nav__in">
+      <a class="nav__mark" href="#top" aria-label="Lucky Cats, back to top">
+        <img src="assets/img/logo.webp" alt="" width="24" height="31" />
+        <span>Lucky Cats <em>20850C</em></span>
+      </a>
+      <nav class="nav__links" id="navLinks" aria-label="Sections">
+        <a href="#accolades">Accolades</a>
+        <a href="#season">Season</a>
+        <a href="#events">Events</a>
+        <a href="#worlds">Worlds</a>
+        <a href="#videos">Videos</a>
+        <a href="#aoe">AOE</a>
+        <a href="#about">About</a>
+      </nav>
+      <a class="btn btn--sm nav__cta" href="#support">Support</a>
+      <button class="nav__menu" id="navMenu" aria-expanded="false" aria-controls="navLinks">
+        <span></span><span></span><span class="sr">Menu</span>
+      </button>
     </div>
-    <button class="nav__menu" id="navMenu" aria-expanded="false" aria-controls="navLinks">
-      <span></span><span></span><span class="sr">Menu</span>
-    </button>
   </header>
 
   <main id="main">
     <!-- ============================================================ HERO -->
     <section class="hero" id="top">
-      <canvas class="hero__coins" id="coins" aria-hidden="true"></canvas>
+      <div class="hero__glow" aria-hidden="true"></div>
+      <div class="wrap">
+        <div class="hero__meta">
+          <span>VEX V5 Robotics Competition</span>
+          <span>Team 20850C</span>
+          <span>Rockville, Maryland</span>
+        </div>
 
-      <div class="hero__grid">
-        <div class="hero__copy">
-          <p class="eyebrow">VEX V5RC <i>·</i> Team 20850C <i>·</i> Rockville, Maryland</p>
-          <h1 class="hero__title" aria-label="Lucky Cats">
-            <span class="line"><span>Lucky</span></span>
-            <span class="line"><span>Cats</span></span>
-          </h1>
-          <p class="hero__lede">
-            A middle school robotics team from AOE Robotics Club. We design, build and program
-            robots for the VEX V5 Robotics Competition, and last season ended with a
-            <a href="#worlds">Judges Award at the World Championship</a>.
-          </p>
-          <div class="hero__actions">
-            <a class="btn" href="#season">See the season</a>
-            <a class="btn btn--ghost" href="#support">Support us</a>
-            <span class="hand hero__hint">scroll, or nudge a coin</span>
+        <div class="hero__grid">
+          <div class="hero__copy">
+            <h1 class="hero__title">
+              <span class="line"><span>Lucky</span></span>
+              <span class="line"><span>Cats</span></span>
+            </h1>
+            <p class="hero__lede">
+              A middle school robotics team from AOE Robotics Club. We design, build and program
+              robots for the VEX V5 Robotics Competition, and last season ended with a Judges Award
+              at the World Championship.
+            </p>
+            <div class="hero__actions">
+              <a class="btn" href="#season">See the season</a>
+              <a class="btn btn--line" href="#support">Support the team</a>
+            </div>
+          </div>
+
+          <div class="hero__art" id="heroArt">
+            <img src="assets/img/logo.webp" alt="Lucky Cats logo: a waving maneki-neko holding a gold coin in front of a gear, above a banner reading Lucky Cats 20850C" width="720" height="920" />
           </div>
         </div>
 
-        <figure class="polaroid" id="polaroid">
-          <div class="polaroid__photo">
-            <img src="assets/img/logo.webp" alt="Lucky Cats logo: a waving maneki-neko holding a gold coin, in front of a gear, above a red banner reading Lucky Cats 20850C" width="720" height="920" />
-          </div>
-          <figcaption class="hand">the beckoning cat · Rockville, MD</figcaption>
-        </figure>
+        <dl class="hero__stats" id="heroStats"></dl>
       </div>
-
-      <a class="hero__plate" href="#worlds" data-hero-plate>
-        <span class="plate__k">Latest honor</span>
-        <span class="plate__v">Judges Award · 2026 VEX World Championship</span>
-        <span class="plate__arrow" aria-hidden="true">→</span>
-      </a>
     </section>
 
     <!-- ======================================================= ACCOLADES -->
     <section class="section" id="accolades">
-      <header class="section__head" data-reveal>
-        <span class="section__num">01</span>
-        <h2>Accolades</h2>
-        <p class="section__aside" data-season-caption></p>
-      </header>
-      <div class="accolades" id="accoladeList" aria-live="polite"></div>
+      <div class="wrap">
+        <header class="sh" data-reveal>
+          <p class="sh__idx"><span>01</span>Accolades</p>
+          <div class="sh__main">
+            <h2>Awards and honors</h2>
+            <p class="sh__aside">Awards from VEX events, confirmed against the official results.</p>
+          </div>
+          <div class="sh__tools" data-switch-slot></div>
+        </header>
+        <div class="accolades" id="accoladeList" aria-live="polite"></div>
+      </div>
     </section>
 
     <!-- ========================================================== SEASON -->
     <section class="section" id="season">
-      <header class="section__head" data-reveal>
-        <span class="section__num">02</span>
-        <h2>The season in numbers</h2>
-        <p class="section__aside">Official results from VEX Events. Practice and unscored matches left out.</p>
-      </header>
-
-      <div class="ledger" id="ledger" data-reveal></div>
-
-      <figure class="chart" data-reveal>
-        <figcaption class="chart__head">
-          <div>
-            <h3>Every match, in order</h3>
-            <p>Our alliance's score rises above the line, the opposing alliance's falls below it.</p>
+      <div class="wrap">
+        <header class="sh" data-reveal>
+          <p class="sh__idx"><span>02</span>Season</p>
+          <div class="sh__main">
+            <h2>The season in numbers</h2>
+            <p class="sh__aside"><span data-season-caption></span>. Practice and unscored matches are left out.</p>
           </div>
-          <ul class="legend" aria-label="Legend">
-            <li><i class="sw sw--us"></i>Lucky Cats alliance</li>
-            <li><i class="sw sw--them"></i>Opposing alliance</li>
-            <li><i class="sw sw--elim"></i>Elimination match</li>
-          </ul>
-        </figcaption>
-        <div class="chart__scroll" id="chartScroll">
-          <svg class="chart__svg" id="chart" role="img" aria-label="Per-match scores for the selected season"></svg>
-        </div>
-        <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-        <p class="chart__note">Full match lists, with every score, are under <a href="#events">Events</a>.</p>
-      </figure>
+          <div class="sh__tools" data-switch-slot></div>
+        </header>
+
+        <div class="ledger" id="ledger" data-reveal></div>
+
+        <figure class="chart" data-reveal>
+          <figcaption class="chart__head">
+            <div>
+              <h3>Every match, in order</h3>
+              <p>Our alliance's score above the line, the opposing alliance's below it.</p>
+            </div>
+            <ul class="legend" aria-label="Legend">
+              <li><i class="sw sw--us"></i>Our alliance</li>
+              <li><i class="sw sw--them"></i>Opponents</li>
+              <li><i class="sw sw--elim"></i>Elimination</li>
+            </ul>
+          </figcaption>
+          <div class="chart__scroll" id="chartScroll">
+            <svg class="chart__svg" id="chart" role="img" aria-label="Per-match scores for the selected season"></svg>
+          </div>
+          <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
+        </figure>
+      </div>
     </section>
 
     <!-- ========================================================== EVENTS -->
     <section class="section" id="events">
-      <header class="section__head" data-reveal>
-        <span class="section__num">03</span>
-        <h2>Event by event</h2>
-        <p class="section__aside">Open any event to see its matches.</p>
-      </header>
-      <ol class="timeline" id="timeline"></ol>
+      <div class="wrap">
+        <header class="sh" data-reveal>
+          <p class="sh__idx"><span>03</span>Events</p>
+          <div class="sh__main">
+            <h2>Event by event</h2>
+            <p class="sh__aside">Select an event to see every match we played there.</p>
+          </div>
+          <div class="sh__tools" data-switch-slot></div>
+        </header>
+        <ol class="timeline" id="timeline"></ol>
+      </div>
     </section>
 
     <!-- ========================================================== WORLDS -->
     <section class="worlds" id="worlds">
-      <div class="worlds__inner">
-        <header class="section__head section__head--dark" data-reveal>
-          <span class="section__num">04</span>
-          <h2>World Championship</h2>
-          <p class="section__aside">St. Louis, Missouri · April 25–27, 2026</p>
+      <div class="wrap">
+        <header class="sh sh--dark" data-reveal>
+          <p class="sh__idx"><span>04</span>Worlds</p>
+          <div class="sh__main">
+            <h2>VEX Robotics World Championship</h2>
+            <p class="sh__aside">St. Louis, Missouri · April 25–27, 2026</p>
+          </div>
         </header>
 
         <div class="worlds__grid">
           <div class="worlds__award" data-reveal>
-            <p class="eyebrow eyebrow--dark">Push Back · Middle School · Technology Division</p>
-            <p class="worlds__big">Judges<br />Award</p>
+            <p class="worlds__kicker">Push Back · Middle School · Technology Division</p>
+            <p class="worlds__big">Judges Award</p>
             <p class="worlds__copy">
               Ten qualification matches in the Technology Division at America's Center. We went
-              5–5, finished 40th, and came home with a judged award from the biggest robotics
+              5–5, finished 40th, and came home with a judged award from the largest robotics
               competition in the world.
             </p>
-            <p class="worlds__aoe">
-              AOE Robotics Club also walked for the United States in the Parade of Nations
-              that year.
-            </p>
+            <p class="worlds__aoe">AOE Robotics Club also walked for the United States in the Parade of Nations.</p>
           </div>
-
           <dl class="worlds__facts" id="worldsFacts" data-reveal></dl>
         </div>
 
         <div class="worlds__strip" data-reveal>
-          <p class="worlds__label">Ten qualification matches</p>
+          <p class="worlds__label">Qualification matches</p>
           <ol class="strip" id="worldsStrip"></ol>
         </div>
       </div>
@@ -174,162 +182,165 @@
 
     <!-- ========================================================== VIDEOS -->
     <section class="section" id="videos">
-      <header class="section__head" data-reveal>
-        <span class="section__num">05</span>
-        <h2>Match videos</h2>
-        <p class="section__aside">Filmed by other teams and scouting channels. Thank you to them.</p>
-      </header>
-      <div class="videos" id="videoGrid"></div>
-      <div class="streams" data-reveal>
-        <p class="streams__k">Full event streams</p>
-        <ul id="streamList"></ul>
+      <div class="wrap">
+        <header class="sh" data-reveal>
+          <p class="sh__idx"><span>05</span>Videos</p>
+          <div class="sh__main">
+            <h2>Match videos</h2>
+            <p class="sh__aside">Filmed and posted by scouting channels and other teams.</p>
+          </div>
+        </header>
+        <div class="videos" id="videoGrid"></div>
+        <div class="streams" data-reveal>
+          <p class="streams__k">Full event streams</p>
+          <ul id="streamList"></ul>
+        </div>
       </div>
     </section>
 
     <!-- ============================================================= AOE -->
-    <section class="section aoe" id="aoe">
-      <header class="section__head" data-reveal>
-        <span class="section__num">06</span>
-        <h2>Built at AOE</h2>
-      </header>
-      <div class="aoe__grid">
-        <div class="aoe__copy" data-reveal>
-          <p class="aoe__lead">
-            We build out of <strong>AOE Robotics Club</strong> in Rockville Town Center, one of the
-            largest robotics clubs in the Maryland, Virginia and D.C. area. AOE gives students
-            whose schools have no robotics program a place to compete.
-          </p>
-          <p>
-            The club is run by <strong>Weestar</strong>, a nonprofit. Its mentors are industry
-            professionals and educators, and alongside its V5RC teams it runs VEX IQ and FTC teams.
-          </p>
-          <p>
-            AOE also hosts tournaments of its own, including the <strong>AOE Robotics Challenge</strong>
-            in the fall and the <strong>AOE Robotics Summit</strong> in late winter. We play in both.
-          </p>
-          <p class="aoe__link"><a href="https://aoerobotics.com" rel="noopener" target="_blank">aoerobotics.com ↗</a></p>
-        </div>
+    <section class="section" id="aoe">
+      <div class="wrap">
+        <header class="sh" data-reveal>
+          <p class="sh__idx"><span>06</span>AOE Robotics</p>
+          <div class="sh__main">
+            <h2>Built at AOE</h2>
+          </div>
+        </header>
+        <div class="split">
+          <div class="prose" data-reveal>
+            <p class="prose__lead">
+              We build out of AOE Robotics Club in Rockville Town Center, one of the largest
+              robotics clubs in the Maryland, Virginia and D.C. area. AOE gives students whose
+              schools have no robotics program a place to compete.
+            </p>
+            <p>
+              The club is run by Weestar, a nonprofit. Its mentors are industry professionals and
+              educators, and alongside its V5RC teams it runs VEX IQ and FTC teams.
+            </p>
+            <p>
+              AOE also hosts tournaments of its own: the AOE Robotics Challenge in the fall and the
+              AOE Robotics Summit in late winter. We compete in both.
+            </p>
+            <p><a class="link" href="https://aoerobotics.com" rel="noopener" target="_blank">aoerobotics.com</a></p>
+          </div>
 
-        <aside class="aoe__notes" data-reveal>
-          <div class="note">
-            <p class="note__k">Why 20850?</p>
-            <p>Every AOE V5 team number starts with 20850, which is also Rockville's ZIP code. The letter is the team: we are C.</p>
-          </div>
-          <div class="note" id="aoeSiblings"></div>
-          <div class="note" id="aoeHome"></div>
-          <div class="note">
-            <p class="note__k">2025–26 across the club</p>
-            <p>13 AOE teams were invited to a VEX or FTC World Championship.</p>
-          </div>
-        </aside>
+          <dl class="facts" data-reveal>
+            <div class="facts__row">
+              <dt>Why 20850</dt>
+              <dd>Every AOE V5 team number starts with 20850, Rockville's ZIP code. The letter is the team: we are C.</dd>
+            </div>
+            <div class="facts__row" id="aoeSiblings"></div>
+            <div class="facts__row" id="aoeHome"></div>
+            <div class="facts__row">
+              <dt>Across the club</dt>
+              <dd>13 AOE teams were invited to a VEX or FTC World Championship in 2025–26.</dd>
+            </div>
+          </dl>
+        </div>
       </div>
     </section>
 
     <!-- =========================================================== ABOUT -->
-    <section class="section about" id="about">
-      <header class="section__head" data-reveal>
-        <span class="section__num">07</span>
-        <h2>About the team</h2>
-      </header>
+    <section class="section" id="about">
+      <div class="wrap">
+        <header class="sh" data-reveal>
+          <p class="sh__idx"><span>07</span>About</p>
+          <div class="sh__main">
+            <h2>About the team</h2>
+          </div>
+        </header>
 
-      <div class="about__grid">
-        <div class="about__col" data-reveal>
-          <h3 class="about__k">Who we are</h3>
-          <p>
-            We are the Lucky Cats Robotics Team, a nonprofit student-led organization based in
-            Rockville, Maryland. Our team is made up of curious, creative, and dedicated students
-            who share a passion for robotics, engineering, and technology. Together, we design,
-            build, and program robots to compete in the VEX Robotics Competition, one of the
-            world's largest and fastest-growing STEM competitions.
-          </p>
-          <h3 class="about__k">What we do</h3>
-          <p>
-            Each season, we take on new engineering challenges where we design robots from the
-            ground up. We brainstorm, prototype, program, and test until our robots are ready for
-            competition. Beyond building robots, we:
-          </p>
-          <ul class="ticks">
-            <li>Run STEM outreach programs to introduce robotics to younger students</li>
-            <li>Share our knowledge with peers and mentor future teams</li>
-            <li>Encourage diversity and inclusion in robotics so everyone feels welcome</li>
-          </ul>
+        <div class="split">
+          <div class="prose" data-reveal>
+            <p class="prose__lead">
+              We are the Lucky Cats Robotics Team, a nonprofit student-led organization based in
+              Rockville, Maryland.
+            </p>
+            <p>
+              Our team is made up of curious, creative, and dedicated students who share a passion
+              for robotics, engineering, and technology. Together, we design, build, and program
+              robots to compete in the VEX Robotics Competition, one of the world's largest and
+              fastest-growing STEM competitions.
+            </p>
+            <p>
+              Each season, we take on new engineering challenges where we design robots from the
+              ground up. We brainstorm, prototype, program, and test until our robots are ready for
+              competition. Beyond building robots, we run STEM outreach programs for younger
+              students, share our knowledge with peers and mentor future teams, and encourage
+              diversity and inclusion in robotics so everyone feels welcome.
+            </p>
+          </div>
+
+          <div data-reveal>
+            <p class="label">Our mission</p>
+            <p class="mission">
+              To inspire the next generation of innovators. Robotics isn't just about competing.
+              It's about learning, teaching, and giving back.
+            </p>
+            <ol class="aims">
+              <li>Develop real-world skills in engineering, coding, and problem-solving</li>
+              <li>Create a fun, supportive environment that celebrates collaboration and innovation</li>
+              <li>Teach and inspire others in our community to explore STEM opportunities</li>
+              <li>Represent our school and community with pride at local, regional, and national competitions</li>
+            </ol>
+          </div>
         </div>
 
-        <div class="about__col" data-reveal>
-          <h3 class="about__k">Our mission</h3>
-          <p class="about__mission">
-            To inspire the next generation of innovators. Robotics isn't just about
-            competing. It's about learning, teaching, and giving back.
-          </p>
-          <ol class="aims">
-            <li><span>01</span>Develop real-world skills in engineering, coding, and problem-solving</li>
-            <li><span>02</span>Create a fun, supportive environment that celebrates collaboration and innovation</li>
-            <li><span>03</span>Teach and inspire others in our community to explore STEM opportunities</li>
-            <li><span>04</span>Represent our school and community with pride at local, regional, and national competitions</li>
-          </ol>
-        </div>
-      </div>
-
-      <div class="origin" data-reveal>
-        <p class="origin__jp" lang="ja" aria-hidden="true">招き猫</p>
-        <div class="origin__copy">
-          <h3 class="about__k">Where the name comes from</h3>
-          <p class="origin__text">
-            Our name, the Lucky Cats, represents our belief in teamwork, determination, and just a
-            little bit of luck to achieve big goals. Like the waving Lucky Cat
-            (<em>maneki-neko</em>) symbol, we aim to bring good fortune, not only to our team but
-            to everyone we inspire along the way.
-          </p>
-          <p class="hand origin__hand">the coin in its paw reads 大吉: “great luck”</p>
-        </div>
-        <button class="koban" id="koban" type="button" aria-label="Flip the coin">
-          <span class="koban__face" lang="ja">大吉</span>
-        </button>
+        <figure class="origin" data-reveal>
+          <div class="origin__mark" aria-hidden="true">
+            <img src="assets/img/logo.webp" alt="" width="720" height="920" loading="lazy" />
+          </div>
+          <figcaption>
+            <p class="label">The name</p>
+            <p class="origin__text">
+              Our name, the Lucky Cats, represents our belief in teamwork, determination, and just a
+              little bit of luck to achieve big goals. Like the waving Lucky Cat
+              (<em>maneki-neko</em>) symbol, we aim to bring good fortune, not only to our team but
+              to everyone we inspire along the way.
+            </p>
+            <p class="origin__note">The coin in the cat's paw reads <span lang="ja">大吉</span>, “great luck.”</p>
+          </figcaption>
+        </figure>
       </div>
     </section>
 
     <!-- ========================================================= SUPPORT -->
-    <section class="section support" id="support">
-      <header class="section__head" data-reveal>
-        <span class="section__num">08</span>
-        <h2>Support &amp; contact</h2>
-      </header>
-      <div class="support__grid">
-        <div class="support__copy" data-reveal>
-          <p class="support__lead">
-            Your support helps us cover robot parts, competition fees, travel, and outreach
-            programs where we teach younger students about robotics.
-          </p>
-          <p>
-            Every donation helps us keep building, competing, and inspiring the next generation of
-            innovators. Thank you for supporting our mission.
-          </p>
-          <div class="support__actions">
-            <a class="btn btn--gold" href="https://www.gofundme.com/f/kj4bhk-support-the-lucky-cats-robotics-team" target="_blank" rel="noopener">Donate on GoFundMe ↗</a>
+    <section class="section section--last" id="support">
+      <div class="wrap">
+        <div class="cta" data-reveal>
+          <div class="cta__copy">
+            <p class="label label--light"><span>08</span>Support</p>
+            <h2 class="cta__title">Help us build the next robot.</h2>
+            <p>
+              Your support helps us cover robot parts, competition fees, travel, and outreach
+              programs where we teach younger students about robotics. Thank you for supporting our
+              mission.
+            </p>
+            <div class="cta__actions">
+              <a class="btn btn--gold" href="https://www.gofundme.com/f/kj4bhk-support-the-lucky-cats-robotics-team" target="_blank" rel="noopener">Donate on GoFundMe</a>
+              <button class="btn btn--ghost" type="button" id="copyMail">Copy email</button>
+            </div>
           </div>
-        </div>
-        <div class="mailcard" data-reveal>
-          <p class="mailcard__k">Write to us</p>
-          <a class="mailcard__addr" href="mailto:luckycats20850@gmail.com" id="mail">luckycats20850<wbr />@gmail.com</a>
-          <button class="mailcard__copy" type="button" id="copyMail">Copy address</button>
-          <p class="mailcard__hint">Sponsors, scrimmage invitations, outreach requests and questions all welcome.</p>
+          <div class="cta__contact">
+            <p class="label label--light">Contact</p>
+            <a class="cta__mail" href="mailto:luckycats20850@gmail.com">luckycats20850<wbr />@gmail.com</a>
+            <p class="cta__hint">Sponsorships, scrimmage invitations, outreach requests and questions are all welcome.</p>
+          </div>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="foot">
-    <div class="foot__row">
-      <p class="foot__brand"><img src="assets/img/logo.webp" alt="" width="22" height="28" /> Lucky Cats · 20850C</p>
-      <p class="foot__data" id="footData">Results from VEX Events (events.vex.com), synced nightly.</p>
-    </div>
-    <div class="foot__row foot__row--small">
-      <p>AOE Robotics Club · Rockville, Maryland</p>
-      <p>Not affiliated with VEX Robotics or the REC Foundation.</p>
+    <div class="wrap foot__in">
+      <p class="foot__brand"><img src="assets/img/logo.webp" alt="" width="20" height="26" /> Lucky Cats · 20850C</p>
+      <p class="foot__data" id="footData">Results from VEX Events, synced nightly.</p>
+      <p class="foot__small">AOE Robotics Club · Rockville, Maryland. Not affiliated with VEX Robotics or the REC Foundation.</p>
     </div>
   </footer>
 
-  <script src="data/team.js"></script>
-  <script src="assets/js/site.js" type="module"></script>
+  <script src="data/team.js?v=2"></script>
+  <script src="assets/js/site.js?v=2" type="module"></script>
 </body>
 </html>
