@@ -1,0 +1,74 @@
+name: Sync results and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 7 * * *" # nightly, about 3 a.m. Eastern
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync from the VEX events API
+        env:
+          # the repo secret was saved as ROBOEVENTS_TOKEN; accept either spelling
+          ROBOTEVENTS_TOKEN: ${{ secrets.ROBOTEVENTS_TOKEN || secrets.ROBOEVENTS_TOKEN }}
+        run: |
+          if [ -z "$ROBOTEVENTS_TOKEN" ]; then
+            echo "::warning::ROBOTEVENTS_TOKEN is not set. Deploying the committed data."
+            node scripts/sync.mjs --offline
+          elif ! node scripts/sync.mjs; then
+            echo "::warning::The API sync failed. Deploying the committed data instead."
+            node scripts/sync.mjs --offline
+          fi
+
+      - name: Commit refreshed data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No new results."
+          else
+            git commit -m "Sync results from the VEX events API"
+            git push
+          fi
+
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp -r index.html favicon.png .nojekyll assets _site/
+          mkdir _site/data
+          cp data/team.js data/team.json _site/data/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
