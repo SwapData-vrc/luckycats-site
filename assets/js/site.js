@@ -508,7 +508,8 @@ function renderChart(S, changed) {
   if (reduced) return;
   if (changed && chartSeen) growBars();
   else if (!chartSeen) {
-    $$(".bar-us, .bar-them, .elim", svg).forEach((n) => (n.style.transform = "scale(1, 0)"));
+    $$(".bar-us, .bar-them", svg).forEach((n) => (n.style.transform = "scale(1, 0)"));
+    $$(".elim", svg).forEach((n) => (n.style.transform = "scale(0)"));
     onView(scroll, () => { chartSeen = true; growBars(); });
   }
 }
