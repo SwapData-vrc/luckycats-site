@@ -643,7 +643,7 @@ function heroIntro() {
     filter: { from: "blur(14px)", to: "blur(0px)" },
     duration: 1300, delay: stagger(50, { start: 150 }), ease: "outExpo",
   });
-  animate([".hero__tag", ".hero__lede", ".hero__actions", ".hero__art"], {
+  animate([".hero__lede", ".hero__actions", ".hero__art"], {
     opacity: { from: 0, to: 1 }, translateY: { from: 24, to: 0 }, duration: 1100, delay: stagger(110, { start: 350 }), ease: "outExpo",
   });
 }

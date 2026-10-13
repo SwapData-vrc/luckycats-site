@@ -1,0 +1,6 @@
+scripts/
+.github/
+README.md
+data/snapshot.compact.json
+data/extras.json
+.impeccable/
