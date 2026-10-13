@@ -613,6 +613,11 @@ li:nth-child(3n) > .spot::before { background: radial-gradient(420px circle at v
 .cta .eyebrow { color: var(--ink); }
 .dr__chips { gap: 6px 18px; }
 
+/* -------------------------------------------------------- scroll scenes */
+.hero__copy, .hero__logo, .scard, .award, .about__card, .cta, .worlds__title, .worlds__facts { will-change: transform; }
+#flow { transform-origin: 70% 30%; }
+.scard { transform-origin: 50% 100%; }
+
 /* ------------------------------------------------------------ responsive */
 @media (max-width: 1080px) {
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }

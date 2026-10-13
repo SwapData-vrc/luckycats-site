@@ -199,7 +199,6 @@ function renderOverview() {
       scrollToEl($("#events"));
     });
   }
-  riseIn($$(".scard"));
   counters($("#seasonCards"));
 
   // awards, newest first
@@ -218,7 +217,6 @@ function renderOverview() {
         <p class="award__date">${esc(fmtDate(e.end))}<br>${esc(place(e))}</p>
       </li>`;
   }).join("") : `<li class="award award--none">No awards yet.</li>`;
-  riseIn($$(".award"), { y: 20, gap: 60 });
 }
 
 // ---------------------------------------------------- events: side scroll ----
@@ -959,6 +957,79 @@ function pageProgress() {
   set();
 }
 
+// ------------------------------------------------------- scroll scenes ----
+// Animations whose playhead follows the scroll position instead of a clock:
+// scroll down and they play, scroll back up and they rewind. Each one is a
+// paused anime.js animation; one loop sets its progress from where its element
+// sits in the viewport, eased a little so it glides rather than ticks.
+const scenes = [];
+const ranges = {
+  // element top travels from the bottom of the screen to 35% down
+  enter: (r, vh) => [vh, vh * 0.35],
+  // element passes all the way through the screen
+  through: (r, vh) => [vh, -r.height],
+  // element (already at the top) scrolls off the screen
+  exit: (r, vh) => [0, -r.height],
+};
+function scene(el, range, build) {
+  if (!el || reduced) return;
+  const anim = build();
+  anim.pause();
+  scenes.push({ el, range: ranges[range], anim, cur: -1 });
+}
+function runScenes() {
+  if (reduced || !scenes.length) return;
+  const tick = () => {
+    const vh = innerHeight;
+    for (const sc of scenes) {
+      const r = sc.el.getBoundingClientRect();
+      if (r.bottom < -vh || r.top > vh * 2) continue; // far off screen: leave it alone
+      const [a, b] = sc.range(r, vh);
+      const p = Math.min(1, Math.max(0, (a - r.top) / (a - b)));
+      sc.cur = sc.cur < 0 ? p : sc.cur + (p - sc.cur) * 0.14;
+      if (Math.abs(sc.cur - p) < 0.0005) sc.cur = p;
+      sc.anim.progress = sc.cur;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+const paused = (targets, props) => animate(targets, { ...props, duration: 1000, ease: "linear", autoplay: false });
+
+function scrollScenes() {
+  // hero: as it leaves, the copy lifts away, the logo sinks back, the color field lags behind
+  const hero = $(".hero");
+  scene(hero, "exit", () => paused(".hero__copy", { translateY: { from: 0, to: -160 }, opacity: { from: 1, to: 0 } }));
+  scene(hero, "exit", () => paused(".hero__logo", { translateY: { from: 0, to: 140 }, scale: { from: 1, to: 0.78 }, rotate: { from: 0, to: -14 }, opacity: { from: 1, to: 0.2 } }));
+  scene(hero, "exit", () => paused("#flow", { translateY: { from: "0%", to: "28%" }, scale: { from: 1, to: 1.18 } }));
+  scene(hero, "exit", () => paused(".hero__scroll", { opacity: { from: 1, to: 0 } }));
+
+  // season cards rise, straighten and grow into place as they come up
+  $$(".scard").forEach((c, i) => scene(c, "enter", () => paused(c, {
+    translateY: { from: 110 + i * 50, to: 0 }, scale: { from: 0.9, to: 1 }, rotate: { from: i ? 2.5 : -2.5, to: 0 }, opacity: { from: 0, to: 1 },
+  })));
+
+  // award rows slide in from the left one after another
+  $$(".award").forEach((row) => scene(row, "enter", () => paused(row, { translateX: { from: -60, to: 0 }, opacity: { from: 0, to: 1 } })));
+
+  // the match chart wipes open from the left
+  scene($("#chartScroll"), "enter", () => paused("#chartScroll", {
+    clipPath: { from: "inset(0% 100% 0% 0% round 22px)", to: "inset(0% 0% 0% 0% round 22px)" },
+  }));
+  scene($("#kpis"), "enter", () => paused("#kpis", { translateY: { from: 40, to: 0 }, opacity: { from: 0, to: 1 } }));
+
+  // Worlds: the award name drifts sideways, the numbers float the other way
+  const worlds = $("#worlds");
+  scene(worlds, "through", () => paused(".worlds__title", { translateX: { from: "14%", to: "-8%" } }));
+  scene(worlds, "through", () => paused(".worlds__facts", { translateY: { from: 80, to: -40 } }));
+
+  // About cards move at slightly different speeds
+  $$(".about__card").forEach((c, i) => scene(c, "through", () => paused(c, { translateY: { from: 70 + i * 35, to: -(30 + i * 25) } })));
+
+  // the support card grows into place
+  scene($(".cta"), "enter", () => paused(".cta", { scale: { from: 0.86, to: 1 }, borderRadius: { from: "72px", to: "28px" }, opacity: { from: 0.3, to: 1 } }));
+}
+
 // ------------------------------------------------------------------ boot ----
 function boot() {
   if (!D) { console.error("data/team.js did not load"); return; }
@@ -975,8 +1046,6 @@ function boot() {
   ctaFlow();
   pageProgress();
   blurText();
-  riseIn($$(".about__card"), { y: 40, gap: 90 });
-  riseIn($$(".cta"), { y: 40 });
   nav();
   smoothScroll();
   magnet();
@@ -986,6 +1055,8 @@ function boot() {
   drawer();
   mail();
   rail.start();
+  scrollScenes();
+  runScenes();
 
   let rw = innerWidth, rt;
   addEventListener("resize", () => {
