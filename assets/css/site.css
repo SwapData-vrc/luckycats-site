@@ -647,6 +647,13 @@ li:nth-child(3n) > .spot::before { background: radial-gradient(420px circle at v
 .head { margin-bottom: clamp(32px, 3.6vw, 48px); }
 .head__sub { font-size: 15.5px; }
 
+/* -------------------------------------------- robot render as quiet filler */
+.filler { position: absolute; z-index: -1; pointer-events: none; user-select: none; height: auto; filter: grayscale(0.55) contrast(0.85); opacity: 0.13; }
+.head--robot { position: relative; isolation: isolate; }
+.filler--head { right: -2%; top: -40px; width: min(520px, 42vw); }
+.filler--card { right: -40px; bottom: -30px; width: 62%; opacity: 0.1; }
+@media (max-width: 900px) { .filler--head { opacity: 0.08; width: 70vw; right: -20vw; } }
+
 /* ------------------------------------------------------------ responsive */
 @media (max-width: 1080px) {
   .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
