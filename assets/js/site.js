@@ -26,7 +26,7 @@ const ordinal = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return
 const suffix = (n) => ordinal(n).slice(String(n).length);
 const place = (e) => [e.city, STATES[e.region] || e.region].filter(Boolean).join(", ");
 const pct = (w, l, t) => (w + l + t ? Math.round((1000 * w) / (w + l + t)) / 10 : 0);
-const wl = (r) => `${r.w}–${r.l}${r.t ? `–${r.t}` : ""}`;
+const wl = (r) => `${r.w}-${r.l}${r.t ? `-${r.t}` : ""}`;
 
 const allEvents = () => D.seasonOrder.flatMap((s) => D.seasons[s].events.map((e) => ({ ...e, season: s })));
 const eventById = (id) => allEvents().find((e) => e.id === id);
@@ -179,7 +179,7 @@ function renderOverview() {
         <div class="scard__main">
           <div>
             <p class="scard__record"><span data-count="${T.wins}">${T.wins}</span><span class="dash">–</span><span data-count="${T.losses}">${T.losses}</span></p>
-            <p class="scard__recordk">${wl(T.qual)} in quals · ${T.elim.w}–${T.elim.l} in elims</p>
+            <p class="scard__recordk">${wl(T.qual)} in quals · ${T.elim.w}-${T.elim.l} in elims</p>
           </div>
           ${sparkline(S)}
         </div>
@@ -369,7 +369,7 @@ function drawer() {
 function renderKpis(S, changed) {
   const T = S.totals;
   const k = [
-    { k: "Win rate", v: pct(T.wins, T.losses, T.ties), dec: 1, unit: "%", sub: `${T.wins}–${T.losses} in ${T.matches} matches` },
+    { k: "Win rate", v: pct(T.wins, T.losses, T.ties), dec: 1, unit: "%", sub: `${T.wins}-${T.losses} in ${T.matches} matches` },
     { k: "Avg score", v: T.avg ?? 0, dec: 1, sub: "our alliance" },
     { k: "Avg margin", v: Math.abs(T.margin ?? 0), dec: 1, pre: (T.margin ?? 0) >= 0 ? "+" : "−", sub: (T.margin ?? 0) >= 0 ? "points per match" : "points behind" },
     { k: "High score", v: T.high ?? 0, sub: "best alliance score" },
@@ -1031,6 +1031,52 @@ function scrollScenes() {
   scene($(".cta"), "enter", () => paused(".cta", { scale: { from: 0.86, to: 1 }, borderRadius: { from: "72px", to: "28px" }, opacity: { from: 0.3, to: 1 } }));
 }
 
+// ------------------------------------------------------------- polish ----
+// First visit in a session: a gold panel lifts away to reveal the page.
+function intro() {
+  const el = $("#intro");
+  let seen = false;
+  try { seen = sessionStorage.getItem("lc-intro") === "1"; sessionStorage.setItem("lc-intro", "1"); } catch {}
+  if (!el) return;
+  if (reduced || seen) { el.remove(); return; }
+  animate($("img", el), { scale: { from: 0.6, to: 1 }, rotate: { from: -12, to: 0 }, opacity: { from: 0, to: 1 }, duration: 700, ease: "outBack(1.6)" });
+  animate(el, { translateY: { from: "0%", to: "-100%" }, duration: 900, delay: 750, ease: "inOutQuart", onComplete: () => el.remove() });
+}
+
+// One underline glides between nav links: it follows hover, and rests on the current section.
+function navInk() {
+  const links = $("#navLinks"), ink = $("#navInk");
+  if (!ink || !finePointer) return;
+  const place = (a) => {
+    if (!a || innerWidth <= 900) { ink.style.opacity = 0; return; }
+    const lr = links.getBoundingClientRect(), r = a.getBoundingClientRect();
+    ink.style.opacity = 1;
+    ink.style.width = `${r.width - 24}px`;
+    ink.style.transform = `translateX(${r.left - lr.left + 12}px)`;
+  };
+  const active = () => $(".is-active", links);
+  for (const a of $$("a", links)) a.addEventListener("pointerenter", () => place(a));
+  links.addEventListener("pointerleave", () => place(active()));
+  new MutationObserver(() => place(active())).observe(links, { subtree: true, attributes: true, attributeFilter: ["class"] });
+  addEventListener("resize", () => place(active()));
+}
+
+// Event cards lean a few degrees toward the pointer.
+function cardTilt() {
+  if (reduced || !finePointer) return;
+  document.addEventListener("pointermove", (e) => {
+    const c = e.target.closest?.(".ecard");
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    c.style.transform = `perspective(900px) rotateY(${(x * 8).toFixed(2)}deg) rotateX(${(-y * 8).toFixed(2)}deg) translateY(-6px)`;
+  });
+  document.addEventListener("pointerout", (e) => {
+    const c = e.target.closest?.(".ecard");
+    if (c && !c.contains(e.relatedTarget)) c.style.transform = "";
+  });
+}
+
 // ------------------------------------------------------------------ boot ----
 function boot() {
   if (!D) { console.error("data/team.js did not load"); return; }
@@ -1056,6 +1102,9 @@ function boot() {
   drawer();
   mail();
   rail.start();
+  intro();
+  navInk();
+  cardTilt();
   scrollScenes();
   runScenes();
 

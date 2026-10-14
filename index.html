@@ -24,9 +24,10 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" />
   <link rel="preload" as="image" href="assets/img/logo.webp" />
   <link rel="modulepreload" href="assets/vendor/anime.esm.min.js" />
-  <link rel="stylesheet" href="assets/css/site.css?v=10" />
+  <link rel="stylesheet" href="assets/css/site.css?v=12" />
 </head>
 <body>
+  <div class="intro" id="intro" aria-hidden="true"><img src="assets/img/logo.webp" alt="" width="120" height="153" /></div>
   <a class="skip" href="#main">Skip to content</a>
   <div class="progressbar" aria-hidden="true"><span id="pageProgress"></span></div>
 
@@ -44,6 +45,7 @@
         <a href="#worlds">Worlds</a>
         <a href="#videos">Videos</a>
         <a href="#about">About</a>
+        <span class="nav__ink" id="navInk" aria-hidden="true"></span>
       </nav>
       <a class="btn btn--sm btn--dark nav__cta" href="#support" data-magnet>Support us</a>
       <button class="nav__menu" id="navMenu" aria-expanded="false" aria-controls="navLinks">
@@ -329,6 +331,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js" integrity="sha384-jqpi9VmOdhyLoLURgjCn7EpnG9BbnHW57ibIZoeaIU+erWDH3k8fQQg0xH2ySjnw" crossorigin="anonymous"></script>
   <script src="data/team.js?v=10"></script>
-  <script src="assets/js/site.js?v=11" type="module"></script>
+  <script src="assets/js/site.js?v=12" type="module"></script>
 </body>
 </html>
