@@ -799,7 +799,7 @@ function magnet() {
       const r = b.getBoundingClientRect();
       utils.set(b, { translateX: (e.clientX - (r.left + r.width / 2)) * 0.25, translateY: (e.clientY - (r.top + r.height / 2)) * 0.35 });
     });
-    b.addEventListener("pointerleave", () => animate(b, { translateX: 0, translateY: 0, duration: 700, ease: "outElastic(1, .5)" }));
+    b.addEventListener("pointerleave", () => animate(b, { translateX: 0, translateY: 0, duration: 700, ease: "outExpo" }));
   }
 }
 

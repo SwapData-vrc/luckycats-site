@@ -639,7 +639,7 @@ li:nth-child(3n) > .spot::before { background: radial-gradient(420px circle at v
 .ecard { transition: border-color 0.3s, transform 0.35s var(--ease), box-shadow 0.5s var(--ease); transform-style: preserve-3d; }
 
 /* award icons pop on row hover */
-.award__icon { transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.award__icon { transition: transform 0.5s var(--ease); }
 .award:hover .award__icon { transform: scale(1.12) rotate(-8deg); }
 
 /* steadier rhythm */
